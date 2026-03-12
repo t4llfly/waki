@@ -8,7 +8,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ./data:/app/data
+      - ./cookies.txt:/app/cookies.txt
     deploy:
       resources:
         limits:

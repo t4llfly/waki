@@ -44,8 +44,7 @@ ytdl_format_options: Any = {
     "no_warnings": True,
     "default_search": "auto",
     "source_address": "0.0.0.0",
-    "username": "oauth2",
-    "cookiefile": "/app/data/youtube_oauth2.txt",
+    "cookiefile": "cookies.txt",
 }
 
 FFMPEG_BEFORE_OPTIONS = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"

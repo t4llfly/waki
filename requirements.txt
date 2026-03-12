@@ -1,6 +1,5 @@
 discord.py[voice]
 yt-dlp
-yt-dlp-youtube-oauth2
 python-dotenv
 pynacl
 davey
