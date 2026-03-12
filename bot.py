@@ -155,6 +155,9 @@ class MusicControlView(discord.ui.View):
 @bot.event
 async def on_ready():
     print(f"Бот {bot.user} успешно запущен и готов к работе!")
+    await bot.change_presence(
+        activity=discord.Streaming(name="(づ ◕‿◕ )づ", url="https://tallfly.me")
+    )
 
 
 @bot.tree.command(name="play", description="Воспроизводит музыку с кнопками управления")
