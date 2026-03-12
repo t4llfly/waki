@@ -8,6 +8,14 @@ from discord import app_commands
 from discord.ext import commands
 from dotenv import load_dotenv
 
+if os.path.exists("cookies.txt"):
+    print("cookies.txt найден")
+    with open("cookies.txt", "r") as f:
+        first_line = f.readline()
+        print(f"Первая строка: {first_line[:50]}...")
+else:
+    print("cookies.txt НЕ найден по пути /app/cookies.txt")
+
 load_dotenv()
 
 TOKEN = os.getenv("DISCORD_TOKEN")
@@ -18,14 +26,11 @@ intents = discord.Intents.default()
 intents.message_content = True
 
 
-# Создаем свой класс бота, чтобы правильно синхронизировать слэш-команды при запуске
 class MusicBot(commands.Bot):
     def __init__(self):
         super().__init__(command_prefix="!", intents=intents)
 
-    # Этот метод вызывается перед тем, как бот выйдет в онлайн
     async def setup_hook(self):
-        # Синхронизируем слэш-команды с Discord
         await self.tree.sync()
         print("Слэш-команды успешно синхронизированы!")
 
@@ -58,12 +63,10 @@ class YTDLSource(discord.PCMVolumeTransformer):
         super().__init__(source, volume)
         self.data = data
         self.title = data.get("title", "Неизвестное название")
-        self.url = data.get("webpage_url", "")  # Ссылка на само видео
-        self.thumbnail = data.get("thumbnail", "")  # Обложка
-        self.uploader = data.get("uploader", "Неизвестный автор")  # Канал
-        self.duration = self.parse_duration(
-            int(data.get("duration", 0))
-        )  # Длительность
+        self.url = data.get("webpage_url", "")
+        self.thumbnail = data.get("thumbnail", "")
+        self.uploader = data.get("uploader", "Неизвестный автор")
+        self.duration = self.parse_duration(int(data.get("duration", 0)))
 
     @staticmethod
     def parse_duration(duration: int):
@@ -139,7 +142,6 @@ class MusicControlView(discord.ui.View):
         if self.voice_client.is_connected():
             await self.voice_client.disconnect()
 
-            # Деактивируем все кнопки после отключения
             for item in self.children:
                 if isinstance(item, discord.ui.Button):
                     item.disabled = True
@@ -183,7 +185,6 @@ async def play(interaction: discord.Interaction, url: str):
 
     voice_client = guild.voice_client
     if not isinstance(voice_client, discord.VoiceClient):
-        # Подключаемся и проверяем тип для basedpyright
         vc = await author.voice.channel.connect()
         if not isinstance(vc, discord.VoiceClient):
             await interaction.followup.send("Не удалось подключиться к каналу.")
@@ -193,13 +194,11 @@ async def play(interaction: discord.Interaction, url: str):
     try:
         player = await YTDLSource.from_url(url, loop=bot.loop, stream=True)
 
-        # Если что-то уже играет, останавливаем перед запуском нового трека
         if voice_client.is_playing() or voice_client.is_paused():
             voice_client.stop()
 
         voice_client.play(player, after=lambda e: print(f"Ошибка: {e}") if e else None)
 
-        # Создаем эмбед
         embed = discord.Embed(
             title="Музыкальный плеер",
             description=f"**[{player.title}]({player.url})**",
@@ -212,10 +211,8 @@ async def play(interaction: discord.Interaction, url: str):
             text=f"Запросил: {author.display_name}", icon_url=author.display_avatar.url
         )
 
-        # СОЗДАЕМ VIEW С КНОПКАМИ
         view = MusicControlView(voice_client=voice_client)
 
-        # Отправляем сообщение с эмбедом и кнопками
         await interaction.followup.send(embed=embed, view=view)
 
     except Exception as e:
