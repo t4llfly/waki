@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  music_bot:
+    build: .
+    container_name: discord_music_bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
