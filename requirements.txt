@@ -1,5 +1,5 @@
 discord.py[voice]
-yt-dlp
 python-dotenv
 pynacl
 davey
+mafic

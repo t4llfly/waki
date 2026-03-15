@@ -153,7 +153,7 @@ async def on_ready() -> None:
 
 
 @bot.tree.command(name="play", description="Воспроизводит музыку с YouTube")
-@app_commands.describe(url="Ссылка на видео или название")
+@app_commands.describe(url="Ссылка на видео")
 async def play(interaction: discord.Interaction, url: str) -> None:
     author = interaction.user
     if not isinstance(author, discord.Member) or not getattr(
@@ -192,7 +192,7 @@ async def play(interaction: discord.Interaction, url: str) -> None:
 
         embed = discord.Embed(
             title=track.title,
-            description=f"**[Слушать на Youtube]({track.uri})**",
+            description=f"**[Ссылка на оригинал]({track.uri})**",
             color=discord.Color.blurple(),
         )
 
@@ -226,7 +226,7 @@ async def stop(interaction: discord.Interaction) -> None:
     if player and player.connected:
         await player.disconnect()
         embed = discord.Embed(
-            description="⏹️ **Воспроизведение остановлено. Бот покинул канал.**",
+            description="**Воспроизведение остановлено. Бот покинул канал.**",
             color=discord.Color.red(),
         )
         await interaction.response.send_message(embed=embed)
