@@ -335,7 +335,7 @@ async def skip(interaction: discord.Interaction) -> None:
     if player.current:
         await player.stop()
         embed = discord.Embed(
-            description="⏭️ Песня пропущена!", color=discord.Color.blue()
+            description="⏭️ Пропускаю песню!", color=discord.Color.blue()
         )
         await interaction.response.send_message(embed=embed)
     else:
