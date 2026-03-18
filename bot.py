@@ -236,13 +236,19 @@ async def join(interaction: discord.Interaction) -> None:
             await interaction.response.send_message(
                 "✅ Я уже сижу с вами!", ephemeral=True
             )
+            return
         else:
             await interaction.response.send_message(
                 "❌ Я уже сижу в другом голосовом канале.", ephemeral=True
             )
+            return
 
     try:
-        await channel.connect(cls=MusicPlayer)
+        vc = await channel.connect(cls=MusicPlayer)
+        player = cast(MusicPlayer, vc)
+
+        await player.set_volume(20)
+
         embed = discord.Embed(
             description=f"👋 Успешно зашла в **{channel.name}**! Могу включить вам музыку!",
             color=discord.Color.green(),
@@ -279,6 +285,8 @@ async def play(interaction: discord.Interaction, url: str) -> None:
     if not voice_client:
         vc = await channel.connect(cls=MusicPlayer)
         player = cast(MusicPlayer, vc)
+
+        await player.set_volume(20)
     else:
         player = cast(MusicPlayer, voice_client)
 
@@ -450,15 +458,23 @@ async def volume(
     await player.set_volume(level)
 
     if level == 0:
-        await interaction.response.send_message("🔇 Выключила звук (Громкость: 0%)")
+        embed = discord.Embed(
+            description="🔇 Выключила звук (Громкость: 0%)",
+            color=discord.Color.yellow(),
+        )
+        await interaction.response.send_message(embed=embed)
     elif level <= 30:
-        await interaction.response.send_message(
-            f"🔉 Понизила громкость до **{level}%**"
+        embed = discord.Embed(
+            description=f"🔉 Понизила громкость до **{level}%**",
+            color=discord.Color.yellow(),
         )
+        await interaction.response.send_message(embed=embed)
     else:
-        await interaction.response.send_message(
-            f"🔊 Установила громкость на **{level}%**"
+        embed = discord.Embed(
+            description=f"🔊 Установила громкость на **{level}%**",
+            color=discord.Color.yellow(),
         )
+        await interaction.response.send_message(embed=embed)
 
 
 bot.run(TOKEN)
