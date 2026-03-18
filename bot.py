@@ -289,9 +289,11 @@ async def play(interaction: discord.Interaction, url: str) -> None:
 
         if isinstance(tracks, mafic.Playlist):
             player.queue.extend(tracks.tracks)
-            await interaction.followup.send(
-                f"📂 Добавила плейлист **{tracks.info.name}** ({len(tracks.tracks)} песен) в очередь!"
+            embed = discord.Embed(
+                description=f"📂 Добавила плейлист **{tracks.name}** ({len(tracks.tracks)} песен) в очередь!",
+                color=discord.Color.green(),
             )
+            await interaction.followup.send(embed=embed)
             if not player.current:
                 await player.play_next()
             return
