@@ -24,6 +24,8 @@ class MusicCog(commands.Cog):
         player = event.player
         title_low = track.title.lower()
 
+        print(f"🎵 [DEBUG] Начал играть трек: {title_low}")
+
         special_triggers = {
             "proi-proi": (
                 "✨ **Ядро пламени... Даруй нам исцеляющую радугу!** ✨",
@@ -37,14 +39,26 @@ class MusicCog(commands.Cog):
 
         for trigger, (message, file_path) in special_triggers.items():
             if trigger in title_low:
-                if player.text_channel and os.path.exists(file_path):
-                    try:
-                        await player.text_channel.send(
-                            content=message, file=discord.File(file_path)
-                        )
-                        break
-                    except Exception as e:
-                        print(f"⚠️ Ошибка при отправке пасхалки '{trigger}': {e}")
+                print(f"🎯 [DEBUG] Нашли совпадение с триггером: {trigger}")
+
+                if not player.text_channel:
+                    print(
+                        "❌ [DEBUG] Ошибка: Бот не знает текстовый канал (text_channel = None)!"
+                    )
+                    break
+
+                if not os.path.exists(file_path):
+                    print(f"❌ [DEBUG] Ошибка: Файл НЕ НАЙДЕН по пути {file_path}")
+                    break
+
+                try:
+                    await player.text_channel.send(
+                        content=message, file=discord.File(file_path)
+                    )
+                    print("✅ [DEBUG] Пасхалка успешно отправлена в чат!")
+                    break
+                except Exception as e:
+                    print(f"⚠️ [DEBUG] Ошибка при отправке в Discord: {e}")
 
     @commands.Cog.listener()
     async def on_track_end(self, event: mafic.TrackEndEvent[MusicPlayer]) -> None:
