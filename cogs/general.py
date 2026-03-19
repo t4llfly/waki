@@ -1,7 +1,7 @@
 import json
 import os
 import random
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import discord
 from discord.ext import commands, tasks
@@ -92,6 +92,41 @@ class GeneralCog(commands.Cog):
             await message.reply(
                 random.choice(self.responses.get("pet_replies", ["(◡‿◡✿)"]))
             )
+
+        elif any(word in content for word in self.responses.get("hug", [])):
+            reply_text = random.choice(
+                self.responses.get("hug_replies", ["(づ ◕‿◕ )づ"])
+            )
+
+            hug_file_path = "data/media/hug.mp4"
+
+            if os.path.exists(hug_file_path):
+                await message.reply(
+                    content=reply_text, file=discord.File(hug_file_path)
+                )
+            else:
+                await message.reply(reply_text)
+                print(
+                    f"⚠️ [DEBUG] Не найдена гифка для обнимашек по пути: {hug_file_path}"
+                )
+
+        elif any(word in content for word in self.responses.get("nsfw", [])):
+            reply_text = random.choice(
+                self.responses.get("nsfw_replies", ["Извращенец! 😠"])
+            )
+            await message.reply(reply_text)
+
+            if isinstance(message.author, discord.Member):
+                try:
+                    mute_time = timedelta(minutes=10)
+                    await message.author.timeout(
+                        mute_time, reason="Неподобающее поведение (18+) к Ваки"
+                    )
+
+                except discord.Forbidden:
+                    await message.channel.send(
+                        "*(Хотела дать мут, но у меня нет прав или этот человек выше меня по роли... 😒)*"
+                    )
 
 
 async def setup(bot: commands.Bot):
