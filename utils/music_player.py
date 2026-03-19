@@ -85,6 +85,7 @@ class MusicPlayer(mafic.Player[commands.Bot]):
     ) -> None:
         super().__init__(client, channel)
         self.queue: list[mafic.Track] = []
+        self.text_channel: discord.abc.Messageable | None = None
 
     async def play_next(self) -> None:
         if not self.queue:

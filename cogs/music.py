@@ -1,4 +1,4 @@
-import asyncio
+import os
 from typing import cast
 
 import discord
@@ -17,6 +17,34 @@ from utils.music_player import (
 class MusicCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+
+    @commands.Cog.listener()
+    async def on_track_start(self, event: mafic.TrackStartEvent[MusicPlayer]) -> None:
+        track = event.track
+        player = event.player
+        title_low = track.title.lower()
+
+        special_triggers = {
+            "proi-proi": (
+                "✨ **Ядро пламени... Даруй нам исцеляющую радугу!** ✨",
+                "data/media/proi.mp4",
+            ),
+            "flares of the blazing sun": (
+                "🔥 **Are you ready, Nanook? I BROUGHT YOU DESTRUCTION!!** 🔥",
+                "data/media/flares.mp4",
+            ),
+        }
+
+        for trigger, (message, file_path) in special_triggers.items():
+            if trigger in title_low:
+                if player.text_channel and os.path.exists(file_path):
+                    try:
+                        await player.text_channel.send(
+                            content=message, file=discord.File(file_path)
+                        )
+                        break
+                    except Exception as e:
+                        print(f"⚠️ Ошибка при отправке пасхалки '{trigger}': {e}")
 
     @commands.Cog.listener()
     async def on_track_end(self, event: mafic.TrackEndEvent[MusicPlayer]) -> None:
@@ -119,8 +147,14 @@ class MusicCog(commands.Cog):
             player = cast(MusicPlayer, vc)
 
             await player.set_volume(20)
+
+            if isinstance(interaction.channel, discord.abc.Messageable):
+                player.text_channel = interaction.channel
         else:
             player = cast(MusicPlayer, voice_client)
+
+            if isinstance(interaction.channel, discord.abc.Messageable):
+                player.text_channel = interaction.channel
 
         try:
             tracks = await player.fetch_tracks(url)

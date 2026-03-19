@@ -83,6 +83,16 @@ class GeneralCog(commands.Cog):
                 random.choice(self.responses.get("silly_replies", ["🥺"]))
             )
 
+        elif any(word in content for word in self.responses.get("sorry", [])):
+            await message.reply(
+                random.choice(self.responses.get("sorry_replies", ["✨"]))
+            )
+
+        elif any(word in content for word in self.responses.get("pet", [])):
+            await message.reply(
+                random.choice(self.responses.get("pet_replies", ["(◡‿◡✿)"]))
+            )
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(GeneralCog(bot))
