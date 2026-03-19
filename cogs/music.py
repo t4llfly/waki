@@ -23,22 +23,23 @@ class MusicCog(commands.Cog):
         if "REPLACED" not in str(event.reason):
             await event.player.play_next()
 
-    @commands.Cog.listener()
-    async def on_voice_state_update(self, before: discord.VoiceState):
-        if before.channel is None:
-            return
+    # TODO: fix this function =================================================
+    # @commands.Cog.listener()
+    # async def on_voice_state_update(self, before: discord.VoiceState):
+    #     if before.channel is None:
+    #         return
 
-        voice_client = before.channel.guild.voice_client
+    #     voice_client = before.channel.guild.voice_client
 
-        if not voice_client or not isinstance(voice_client, MusicPlayer):
-            return
+    #     if not voice_client or not isinstance(voice_client, MusicPlayer):
+    #         return
 
-        if len([m for m in before.channel.members if not m.bot]) == 0:
-            await asyncio.sleep(60)
+    #     if len([m for m in before.channel.members if not m.bot]) == 0:
+    #         await asyncio.sleep(60)
 
-            if len([m for m in before.channel.members if not m.bot]) == 0:
-                voice_client.queue.clear()
-                await voice_client.disconnect()
+    #         if len([m for m in before.channel.members if not m.bot]) == 0:
+    #             voice_client.queue.clear()
+    #             await voice_client.disconnect()
 
     @app_commands.command(name="join", description="Зайду к вам в канал")
     async def join(self, interaction: discord.Interaction) -> None:
