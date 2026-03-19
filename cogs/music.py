@@ -167,7 +167,6 @@ class MusicCog(commands.Cog):
             return
 
         player = cast(MusicPlayer, guild.voice_client)
-
         if not player.queue and not player.current:
             embed = discord.Embed(
                 description="**❌ Очередь пуста**",
@@ -187,16 +186,46 @@ class MusicCog(commands.Cog):
 
         if player.queue:
             queue_text = ""
-            for i, track in enumerate(player.queue[:10], start=1):
-                queue_text += f"**{i}.**[{track.title}]({track.uri}) ({format_duration(track.length)})\n"
+            for i, track in enumerate(player.queue, start=1):
+                next_line = f"**{i}.** [{track.title}]({track.uri}) ({format_duration(track.length)})\n"
 
-            if len(player.queue) > 10:
-                queue_text += f"\n*...и еще {len(player.queue) - 10} песен*"
+                if len(queue_text) + len(next_line) > 950:
+                    queue_text += f"\n*...и еще {len(player.queue) - i + 1} треков*"
+                    break
+
+                queue_text += next_line
 
             embed.add_field(name="💕 Следующие песни:", value=queue_text, inline=False)
         else:
             embed.add_field(name="💕 Следующие песни:", value="*Пусто*", inline=False)
 
+        await interaction.response.send_message(embed=embed)
+
+    @app_commands.command(name="clear", description="Очищу очередь песен")
+    async def clear(self, interaction: discord.Interaction) -> None:
+        guild = interaction.guild
+        if not guild or not guild.voice_client:
+            await interaction.response.send_message(
+                "❌ Я не в голосовом канале!", ephemeral=True
+            )
+            return
+
+        player = cast(MusicPlayer, guild.voice_client)
+        count = len(player.queue)
+
+        if count == 0:
+            embed = discord.Embed(
+                description="Очередь и так пуста! ✨", color=discord.Color.yellow()
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+
+        player.queue.clear()
+
+        embed = discord.Embed(
+            description=f"🗑️ Очередь очищена! Удалено треков: **{count}**",
+            color=discord.Color.green(),
+        )
         await interaction.response.send_message(embed=embed)
 
     # same command but different aliases ==========================================
