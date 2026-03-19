@@ -33,14 +33,14 @@ class MusicCog(commands.Cog):
             ),
             "flares of the blazing sun": (
                 "🔥 **Are you ready, Nanook? I BROUGHT YOU DESTRUCTION!!** 🔥",
-                "data/media/flares.mp4",
+                "data/media/phainon.mp4",
             ),
             "hark! there's revelry atop the divine mountain": (
                 "🔥 **Are you ready, Nanook? I BROUGHT YOU DESTRUCTION!!** 🔥",
-                "data/media/flares.mp4",
+                "data/media/phainon.mp4",
             ),
             "it's not like i like you!!": (
-                "**Я не цундере, дурак!**",
+                "💢 **Я не цундере, дурак! ** 💢",
                 "data/media/tsundere.mp4",
             ),
         }
