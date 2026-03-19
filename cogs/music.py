@@ -1,3 +1,4 @@
+import asyncio
 from typing import cast
 
 import discord
@@ -21,6 +22,23 @@ class MusicCog(commands.Cog):
     async def on_track_end(self, event: mafic.TrackEndEvent[MusicPlayer]) -> None:
         if "REPLACED" not in str(event.reason):
             await event.player.play_next()
+
+    @commands.Cog.listener()
+    async def on_voice_state_update(self, before: discord.VoiceState):
+        if before.channel is None:
+            return
+
+        voice_client = before.channel.guild.voice_client
+
+        if not voice_client or not isinstance(voice_client, MusicPlayer):
+            return
+
+        if len([m for m in before.channel.members if not m.bot]) == 0:
+            await asyncio.sleep(60)
+
+            if len([m for m in before.channel.members if not m.bot]) == 0:
+                voice_client.queue.clear()
+                await voice_client.disconnect()
 
     @app_commands.command(name="join", description="Зайду к вам в канал")
     async def join(self, interaction: discord.Interaction) -> None:
@@ -154,6 +172,31 @@ class MusicCog(commands.Cog):
             await interaction.response.send_message(
                 "❌ Сейчас ничего не играет", ephemeral=True
             )
+
+    @app_commands.command(name="now", description="Покажу, что играет сейчас")
+    async def nowplaying(self, interaction: discord.Interaction) -> None:
+        guild = interaction.guild
+        if not guild or not guild.voice_client:
+            await interaction.response.send_message(
+                "❌ Я не в голосовом канале!", ephemeral=True
+            )
+            return
+
+        player = cast(MusicPlayer, guild.voice_client)
+
+        if not player.current:
+            await interaction.response.send_message(
+                "❌ Сейчас ничего не играет.", ephemeral=True
+            )
+            return
+
+        current_pos = int(player.position)
+
+        embed = create_track_embed(player.current, position=current_pos)
+
+        view = MusicControlView(player=player)
+
+        await interaction.response.send_message(embed=embed, view=view)
 
     @app_commands.command(name="queue", description="Покажу очередь песен")
     async def queue(self, interaction: discord.Interaction) -> None:

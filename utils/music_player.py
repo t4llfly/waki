@@ -47,12 +47,23 @@ def format_duration(ms: int) -> str:
 
 
 # embed =======================================================================
-def create_track_embed(track: mafic.Track) -> discord.Embed:
+def create_track_embed(track: mafic.Track, position: int = 0) -> discord.Embed:
     embed = discord.Embed(
         title=track.title,
         description=f"**[Ссылочка на оригинал]({track.uri})**",
         color=discord.Color.pink(),
     )
+
+    if track.length > 0:
+        bar_length = 15
+        progress = int((position / track.length) * bar_length)
+
+        progress = min(max(progress, 0), bar_length - 1)
+
+        bar = "".join(["▬" if i != progress else "🔘" for i in range(bar_length)])
+
+        time_info = f"`{format_duration(position)} / {format_duration(track.length)}`"
+        embed.add_field(name="Прогресс", value=f"{time_info}\n{bar}", inline=False)
 
     artwork = track.artwork_url
     if "youtube.com" in str(track.uri) or "youtu.be" in str(track.uri):
@@ -62,7 +73,6 @@ def create_track_embed(track: mafic.Track) -> discord.Embed:
         embed.set_image(url=artwork)
 
     embed.add_field(name="Канал", value=track.author or "Неизвестно", inline=True)
-    embed.add_field(name="Время", value=format_duration(track.length), inline=True)
     return embed
 
 
