@@ -66,9 +66,6 @@ class MusicBot(commands.Bot):
 
     async def on_ready(self) -> None:
         print(f"Бот {self.user} запущен!")
-        await self.change_presence(
-            activity=discord.Streaming(name="(づ ◕‿◕ )づ", url="https://tallfly.me")
-        )
 
 
 if __name__ == "__main__":
