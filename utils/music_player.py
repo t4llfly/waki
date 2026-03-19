@@ -144,9 +144,15 @@ class MusicControlView(discord.ui.View):
     async def stop_button(
         self, interaction: discord.Interaction, button: discord.ui.Button[Any]
     ) -> None:
-        if self.player.connected:
+        if self.player:
             self.player.queue.clear()
-            await self.player.disconnect()
+
+            try:
+                await self.player.disconnect()
+            except Exception:
+                if self.player.guild:
+                    await self.player.guild.change_voice_state(channel=None)
+
             for item in self.children:
                 if isinstance(item, discord.ui.Button):
                     item.disabled = True

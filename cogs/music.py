@@ -343,7 +343,7 @@ class MusicCog(commands.Cog):
             return
 
         player = cast(MusicPlayer, guild.voice_client)
-        if player and player.connected:
+        if player:
             player.queue.clear()
 
             try:
@@ -351,7 +351,7 @@ class MusicCog(commands.Cog):
             except Exception as e:
                 print(f"⚠️ [DEBUG] Ошибка Lavalink при выходе (игнорируем): {e}")
                 if guild.voice_client:
-                    await guild.voice_client.disconnect(force=True)
+                    await guild.change_voice_state(channel=None)
 
             embed = discord.Embed(
                 description="**⏹️ Остановила песни и очистила очередь!**",
