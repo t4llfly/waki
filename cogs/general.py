@@ -2,6 +2,7 @@ import json
 import os
 import random
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import discord
 from discord.ext import commands, tasks
@@ -35,7 +36,7 @@ class GeneralCog(commands.Cog):
     async def status_updater(self):
         await self.bot.wait_until_ready()
 
-        hour = datetime.now().hour
+        hour = datetime.now(ZoneInfo("Asia/Almaty")).hour
 
         if 6 <= hour < 12:
             period = "morning"
