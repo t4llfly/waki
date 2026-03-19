@@ -35,6 +35,10 @@ class MusicCog(commands.Cog):
                 "🔥 **Are you ready, Nanook? I BROUGHT YOU DESTRUCTION!!** 🔥",
                 "data/media/flares.mp4",
             ),
+            "it's not like i like you!!": (
+                "**Я не цундере, дурак!**",
+                "data/media/tsundere.mp4",
+            ),
         }
 
         for trigger, (message, file_path) in special_triggers.items():
