@@ -1,9 +1,10 @@
 import json
 import os
 import random
+from datetime import datetime
 
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 
 class GeneralCog(commands.Cog):
@@ -11,6 +12,8 @@ class GeneralCog(commands.Cog):
         self.bot = bot
         self.data_path = "data/responses.json"
         self.responses = self.load_responses()
+
+        self.status_updater.start()
 
     def load_responses(self):
         if os.path.exists(self.data_path):
@@ -24,6 +27,32 @@ class GeneralCog(commands.Cog):
                 "thanks_replies": ["❤️"],
                 "praise_replies": ["❤️"],
             }
+
+    async def cog_unload(self) -> None:
+        self.status_updater.cancel()
+
+    @tasks.loop(minutes=30)
+    async def status_updater(self):
+        await self.bot.wait_until_ready()
+
+        hour = datetime.now().hour
+
+        if 6 <= hour < 12:
+            period = "morning"
+        elif 12 <= hour < 18:
+            period = "day"
+        elif 18 <= hour < 24:
+            period = "evening"
+        else:
+            period = "night"
+
+        status_data = self.responses.get("statuses", {}).get(period)
+        if status_data:
+            status_text = status_data["text"]
+
+            await self.bot.change_presence(
+                activity=discord.Streaming(name=status_text, url="https://tallfly.me")
+            )
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
