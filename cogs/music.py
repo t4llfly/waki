@@ -414,6 +414,63 @@ class MusicCog(commands.Cog):
             )
             await interaction.response.send_message(embed=embed)
 
+    @app_commands.command(name="status", description="Проверю статус серверов")
+    async def status(self, interaction: discord.Interaction) -> None:
+        embed = discord.Embed(title="📊 Статус", color=discord.Color.blurple())
+
+        pool = getattr(self.bot, "pool", None)
+
+        if pool is None or not isinstance(pool, mafic.NodePool):
+            embed.add_field(
+                name="🖥️ Сервера",
+                value="❌ Не нашла серверов.",
+                inline=False,
+            )
+            embed.color = discord.Color.red()
+        else:
+            nodes = pool.nodes
+
+            if not nodes:
+                embed.add_field(
+                    name="🖥️ Сервера",
+                    value="❌ В списке нет ни одного сервера.",
+                    inline=False,
+                )
+            else:
+                for node in nodes:
+                    label = getattr(node, "label", "Lavalink Node")
+                    host = getattr(node, "host", "Unknown Host")
+
+                    is_online = bool(getattr(node, "session_id", None))
+                    status_emoji = "🟢 Подключен" if is_online else "🔴 Отключен"
+
+                    stats_info = f"**Адрес:** `{host}`\n**Состояние:** {status_emoji}\n"
+
+                    node_stats = getattr(node, "stats", None)
+                    if node_stats and is_online:
+                        try:
+                            memory = getattr(node_stats, "memory", None)
+                            ram_mb = round(memory.used / 1024 / 1024) if memory else 0
+
+                            cpu = getattr(node_stats, "cpu", None)
+                            cpu_load = getattr(cpu, "lavalink_load", 0)
+                            if cpu_load == 0:
+                                cpu_load = getattr(cpu, "system_load", 0)
+
+                            ram_cpu_info = f"{ram_mb} МБ / {round(cpu_load * 100, 1)}%"
+
+                            stats_info += f"**Нагрузка (RAM / CPU):** {ram_cpu_info}\n"
+                        except Exception:
+                            stats_info += "*Ошибка при чтении...*\n"
+                    elif not is_online:
+                        stats_info += "*Ожидание подключения к серверу...*\n"
+
+                    embed.add_field(
+                        name=f"🎵 Сервер: {label}", value=stats_info, inline=False
+                    )
+
+        await interaction.response.send_message(embed=embed)
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(MusicCog(bot))
