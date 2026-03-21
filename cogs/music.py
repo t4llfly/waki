@@ -31,9 +31,9 @@ class MusicCog(commands.Cog):
                 "✨ **Ядро пламени... Даруй нам исцеляющую радугу!** ✨",
                 "data/media/proi.mp4",
             ),
-            "proi-proi": (
-                "✨ **Ядро пламени... Даруй нам исцеляющую радугу!** ✨",
-                "data/media/proi.mp4",
+            "with you once more": (
+                "||🥹 See you tomorrow 🥹||",
+                "data/media/cyrene.mp4",
             ),
             "払暁": (
                 "✨ **Ядро пламени... Даруй нам исцеляющую радугу!** ✨",
