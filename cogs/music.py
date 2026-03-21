@@ -32,7 +32,7 @@ class MusicCog(commands.Cog):
                 "data/media/proi.mp4",
             ),
             "with you once more": (
-                "||🥹 See you tomorrow 🥹||",
+                "||🥹 **See you tomorrow** 🥹||",
                 "data/media/cyrene.mp4",
             ),
             "払暁": (
