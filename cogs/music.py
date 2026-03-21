@@ -39,6 +39,10 @@ class MusicCog(commands.Cog):
                 "✨ **Ядро пламени... Даруй нам исцеляющую радугу!** ✨",
                 "data/media/proi.mp4",
             ),
+            "sway to my beat in cosmos": (
+                "🎵 **Mennd your pace, sway to the beat. Hands up, embrace who you wanna be** 🎵",
+                "data/media/robin.mp4",
+            ),
             "flares of the blazing sun": (
                 "🔥 **Are you ready, Nanook? I BROUGHT YOU DESTRUCTION!!** 🔥",
                 "data/media/phainon.mp4",
