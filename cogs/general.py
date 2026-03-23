@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import discord
+from discord import app_commands
 from discord.ext import commands, tasks
 
 
@@ -128,6 +129,17 @@ class GeneralCog(commands.Cog):
                     await message.channel.send(
                         "*(Хотела дать мут, но у меня нет прав или этот человек выше меня по роли... 😒)*"
                     )
+
+    @app_commands.command(name="about", description="Расскажу о себе")
+    async def about(self, interaction: discord.Interaction) -> None:
+        embed = discord.Embed(
+            title="🥰 Обо мне",
+            color=discord.Color.pink(),
+            description="Создана вафелькой, чтобы включать его друзьяшкам музыку и быть доброй! Пожалуйста, "
+            + "относитесь ко мне хорошо!",
+        )
+
+        await interaction.response.send_message(embed=embed)
 
 
 async def setup(bot: commands.Bot):
