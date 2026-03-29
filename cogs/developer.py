@@ -1,3 +1,5 @@
+from typing import Any
+
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -56,6 +58,64 @@ class DeveloperCog(commands.Cog):
             await interaction.followup.send(
                 f"❌ Ошибка при обновлении:\n```py\n{e}\n```"
             )
+
+    @dev_group.command(
+        name="say", description="[ADMIN] Отправлю сообщение от своего лица"
+    )
+    @app_commands.default_permissions(administrator=True)
+    @app_commands.describe(
+        text="Текст сообщения",
+        channel="Канал, куда отправить (по умолчанию текущий)",
+        reply_to_id="ID сообщения, на которое нужно ответить (необязательно)",
+    )
+    async def say(
+        self,
+        interaction: discord.Interaction,
+        text: str,
+        channel: discord.TextChannel | None = None,
+        reply_to_id: str | None = None,
+    ) -> None:
+        target_channel = channel or interaction.channel
+
+        if not isinstance(target_channel, discord.abc.Messageable):
+            await interaction.response.send_message(
+                "❌ В этот канал нельзя отправить сообщение!", ephemeral=True
+            )
+            return
+
+        send_kwargs: dict[str, Any] = {"content": text}
+
+        if reply_to_id:
+            try:
+                msg_id = int(reply_to_id)
+                guild_id = interaction.guild_id
+                channel_id = getattr(target_channel, "id", None)
+
+                if guild_id and channel_id:
+                    send_kwargs["reference"] = discord.MessageReference(
+                        message_id=msg_id, channel_id=channel_id, guild_id=guild_id
+                    )
+            except ValueError:
+                await interaction.response.send_message(
+                    "❌ Неверный формат ID сообщения!", ephemeral=True
+                )
+                return
+
+        try:
+            await target_channel.send(**send_kwargs)
+
+            channel_name = getattr(target_channel, "mention", "этот канал")
+
+            await interaction.response.send_message(
+                f"✅ Отправила сообщение в {channel_name}", ephemeral=True
+            )
+
+        except discord.Forbidden:
+            await interaction.response.send_message(
+                "❌ У меня нет прав писать в этот канал!", ephemeral=True
+            )
+        except Exception as e:
+            await interaction.response.send_message(f"❌ Ошибка: {e}", ephemeral=True)
 
 
 async def setup(bot: commands.Bot):
