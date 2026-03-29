@@ -1,6 +1,7 @@
 import json
 import os
 import random
+import string
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -63,6 +64,14 @@ class GeneralCog(commands.Cog):
 
         content = message.content.lower()
 
+        clean_content = content.translate(str.maketrans("", "", string.punctuation))
+        words = clean_content.split()
+
+        is_named = any(name in words for name in self.responses.get("name", []))
+        is_wrong_named = any(
+            name in words for name in self.responses.get("wrong_name", [])
+        )
+
         is_mentioned = self.bot.user in message.mentions
         is_reply_to_bot = (
             message.reference
@@ -71,7 +80,13 @@ class GeneralCog(commands.Cog):
             and message.reference.resolved.author == self.bot.user
         )
 
-        if not (is_mentioned or is_reply_to_bot):
+        if not (is_mentioned or is_reply_to_bot or is_named or is_wrong_named):
+            return
+
+        if is_wrong_named:
+            await message.reply(
+                random.choice(self.responses.get("wrong_name_replies", ["Я Ваки! 😠"]))
+            )
             return
 
         if any(word in content for word in self.responses["thanks"]):
@@ -129,6 +144,11 @@ class GeneralCog(commands.Cog):
                     await message.channel.send(
                         "*(Хотела дать мут, но у меня нет прав или этот человек выше меня по роли... 😒)*"
                     )
+
+        elif is_named:
+            await message.reply(
+                random.choice(self.responses.get("name_replies", ["Да, я тут! ✨"]))
+            )
 
     @app_commands.command(name="about", description="Расскажу о себе")
     async def about(self, interaction: discord.Interaction) -> None:

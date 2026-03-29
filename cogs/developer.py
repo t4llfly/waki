@@ -59,9 +59,7 @@ class DeveloperCog(commands.Cog):
                 f"❌ Ошибка при обновлении:\n```py\n{e}\n```"
             )
 
-    @dev_group.command(
-        name="say", description="[ADMIN] Отправлю сообщение от своего лица"
-    )
+    @dev_group.command(name="say", description="Отправлю сообщение от своего лица")
     @app_commands.default_permissions(administrator=True)
     @app_commands.describe(
         text="Текст сообщения",
