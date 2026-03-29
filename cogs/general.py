@@ -16,6 +16,8 @@ class GeneralCog(commands.Cog):
         self.data_path = "data/responses.json"
         self.responses = self.load_responses()
 
+        self.name_strikes = {}
+
         self.status_updater.start()
 
     def load_responses(self):
@@ -84,9 +86,50 @@ class GeneralCog(commands.Cog):
             return
 
         if is_wrong_named:
-            await message.reply(
-                random.choice(self.responses.get("wrong_name_replies", ["Я Ваки! 😠"]))
-            )
+            user_id = message.author.id
+
+            self.name_strikes[user_id] = self.name_strikes.get(user_id, 0) + 1
+            strikes = self.name_strikes[user_id]
+
+            if strikes == 1:
+                reply_text = random.choice(
+                    self.responses.get("wrong_name_1", ["Я Ваки! 😠"])
+                )
+                await message.reply(reply_text)
+
+            elif strikes == 2:
+                reply_text = random.choice(
+                    self.responses.get(
+                        "wrong_name_2", ["Еще раз назовешь Шаки — кину в мут! 😤"]
+                    )
+                )
+                await message.reply(reply_text)
+
+            else:
+                if isinstance(message.author, discord.Member):
+                    try:
+                        mute_time = timedelta(minutes=10)
+                        await message.author.timeout(
+                            mute_time,
+                            reason="Неоднократно назвал Ваки неправильным именем (Шаки)",
+                        )
+
+                        reply_text = random.choice(
+                            self.responses.get(
+                                "wrong_name_mute",
+                                ["Всё, терпение лопнуло! В тайм-аут! 🔨"],
+                            )
+                        )
+                        await message.reply(reply_text)
+
+                        self.name_strikes[user_id] = 0
+
+                    except discord.Forbidden:
+                        await message.reply(
+                            "*(Хотела кинуть тебя в мут за 'Шаки', но у тебя права выше моих... 😒 Я ВАКИ!)*"
+                        )
+                        self.name_strikes[user_id] = 0
+
             return
 
         if any(word in content for word in self.responses["thanks"]):
