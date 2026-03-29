@@ -87,6 +87,9 @@ class MusicPlayer(mafic.Player[commands.Bot]):
         self.queue: list[mafic.Track] = []
         self.text_channel: discord.abc.Messageable | None = None
 
+        self._pre_boost_volume: int = 20
+        self._is_boosted: bool = False
+
     async def play_next(self) -> None:
         if not self.queue:
             return

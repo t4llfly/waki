@@ -1,4 +1,5 @@
 import os
+import random
 from typing import cast
 
 import discord
@@ -474,6 +475,52 @@ class MusicCog(commands.Cog):
                     )
 
         await interaction.response.send_message(embed=embed)
+
+    @app_commands.command(
+        name="boost",
+        description="[ADMIN] Резко усилю звук (или верну обратно)",
+    )
+    @app_commands.default_permissions(administrator=True)
+    async def boost(self, interaction: discord.Interaction) -> None:
+        guild = interaction.guild
+        if not guild or not guild.voice_client:
+            await interaction.response.send_message(
+                "❌ Я не в голосовом канале!", ephemeral=True
+            )
+            return
+
+        player = cast(MusicPlayer, guild.voice_client)
+
+        current_vol = int(getattr(player, "volume", 20))
+
+        if not player._is_boosted:
+            player._pre_boost_volume = current_vol
+            player._is_boosted = True
+
+            await player.set_volume(100)
+
+            responses = [
+                "Хи-хи... Ну держитесь за уши! 🔥🔥🔥",
+                "ВРУБАЕМ НА ПОЛНУЮ! 🔊⚡️",
+                "Ой, кажется, сейчас будет ОЧЕНЬ громко... (づ ◕‿◕ )づ",
+                "ОСТОРОЖНЕЕ, СЕЙЧАС БУДЕТ ГРОМКО! 🧨",
+            ]
+
+            embed = discord.Embed(
+                description=random.choice(responses),
+                color=discord.Color.orange(),
+            )
+            await interaction.response.send_message(embed=embed)
+        else:
+            player._is_boosted = False
+            target_vol = getattr(player, "_pre_boost_volume", 20)
+            await player.set_volume(target_vol)
+
+            embed = discord.Embed(
+                description=f"🌸 Фух... Возвращаю тишину (Громкость: {target_vol}%). Надеюсь, все живы и здоровы!",
+                color=discord.Color.green(),
+            )
+            await interaction.response.send_message(embed=embed)
 
 
 async def setup(bot: commands.Bot):
