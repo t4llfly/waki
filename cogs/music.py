@@ -56,6 +56,7 @@ class MusicCog(commands.Cog):
                 "💢 **Я не цундере, дурак! ** 💢",
                 "data/media/tsundere.mp4",
             ),
+            "きゅうくらりん": ("", "data/media/kyu-kurarin.mp4"),
         }
 
         for trigger, (message, file_path) in special_triggers.items():
