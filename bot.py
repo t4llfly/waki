@@ -49,6 +49,12 @@ class MusicBot(commands.Bot):
             print("ПРЕДУПРЕЖДЕНИЕ: Список нод пуст.")
             return
 
+        for node in list(self.pool.nodes):
+            try:
+                await self.pool.remove_node(node)
+            except Exception:
+                pass
+
         for node_data in LAVALINK_NODES:
             try:
                 await self.pool.create_node(
@@ -57,6 +63,8 @@ class MusicBot(commands.Bot):
                     password=node_data["password"],
                     label=node_data["label"],
                     secure=node_data.get("secure", False),
+                    heartbeat=15,
+                    timeout=10.0,
                 )
                 print(f"Узел {node_data['label']} успешно подключен!")
             except Exception as e:

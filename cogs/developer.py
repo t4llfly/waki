@@ -115,6 +115,24 @@ class DeveloperCog(commands.Cog):
         except Exception as e:
             await interaction.response.send_message(f"❌ Ошибка: {e}", ephemeral=True)
 
+    @dev_group.command(
+        name="reconnect", description="Переподключусь к серверам Lavalink"
+    )
+    @app_commands.default_permissions(administrator=True)
+    async def reconnect(self, interaction: discord.Interaction) -> None:
+        await interaction.response.defer(ephemeral=True)
+        try:
+            bot = self.bot
+            if hasattr(bot, "connect_lavalink"):
+                await getattr(bot, "connect_lavalink")()
+                await interaction.followup.send(
+                    "✅ Сигнал на переподключение узлов успешно отправлен! Проверь `/status`."
+                )
+            else:
+                await interaction.followup.send("❌ Не нашла метод connect_lavalink.")
+        except Exception as e:
+            await interaction.followup.send(f"❌ Ошибка при переподключении: {e}")
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(DeveloperCog(bot))
