@@ -188,6 +188,20 @@ class GeneralCog(commands.Cog):
                         "*(Хотела дать мут, но у меня нет прав или этот человек выше меня по роли... 😒)*"
                     )
 
+        elif any(word in content for word in self.responses.get("cookie", [])):
+            user_id = message.author.id
+            if hasattr(self, "name_strikes") and user_id in self.name_strikes:
+                if self.name_strikes[user_id] > 0:
+                    self.name_strikes[user_id] = 0
+                    await message.reply(
+                        "Я люблю сладкое! 🍪 За такую доброту я прощаю твои проступки! Теперь я снова добрая Ваки. 🥰"
+                    )
+                    return
+
+            await message.reply(
+                random.choice(self.responses.get("cookie_replies", ["Спасибо! ❤️"]))
+            )
+
         elif is_named:
             await message.reply(
                 random.choice(self.responses.get("name_replies", ["Да, я тут! ✨"]))
