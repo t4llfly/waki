@@ -10,7 +10,7 @@ from discord.ext import commands
 class FunCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.data_path = "data/responses.json"
+        self.data_path = "data/persona.json"
 
     def load_responses(self):
         if os.path.exists(self.data_path):

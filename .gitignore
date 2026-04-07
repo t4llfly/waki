@@ -215,6 +215,5 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# WIP Realization
-/lavalink
-cookies.txt
+# Local virtual environment
+data/users.json
