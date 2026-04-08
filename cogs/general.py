@@ -174,20 +174,25 @@ class GeneralCog(commands.Cog):
 
         # greeting
         friend_name = self.users.get("friends", {}).get(str(user_id))
-        if (
-            is_named
-            or is_mentioned
-            or is_role_mentioned
-            or any(word in content for word in ["привет", "хай", "приветик"])
-        ):
+        is_greeting = any(word in words for word in ["привет", "хай", "приветик"])
+
+        bot_id = self.bot.user.id if self.bot.user else 0
+
+        content_raw = message.content
+        explicit_ping = f"<@{bot_id}>" in content_raw or f"<@!{bot_id}>" in content_raw
+
+        if is_greeting:
             if friend_name:
                 await message.reply(
                     f"Приветик, **{friend_name}**! 🤗 Рада тебя видеть!"
                 )
             else:
-                await message.reply(
-                    random.choice(self.dialogue.get("name_replies", ["Да, я тут! ✨"]))
-                )
+                await message.reply("Приветик! ✨")
+
+        elif is_named or explicit_ping or is_role_mentioned:
+            await message.reply(
+                random.choice(self.dialogue.get("name_replies", ["Да, я тут! ✨"]))
+            )
 
     @app_commands.command(name="about", description="Расскажу о себе")
     async def about(self, interaction: discord.Interaction) -> None:
