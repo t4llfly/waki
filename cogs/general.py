@@ -83,7 +83,19 @@ class GeneralCog(commands.Cog):
             and message.reference.resolved.author == self.bot.user
         )
 
-        if not (is_mentioned or is_reply_to_bot or is_named or is_wrong_named):
+        is_role_mentioned = False
+        if message.guild and message.guild.me:
+            is_role_mentioned = any(
+                role in message.guild.me.roles for role in message.role_mentions
+            )
+
+        if not (
+            is_mentioned
+            or is_reply_to_bot
+            or is_named
+            or is_wrong_named
+            or is_role_mentioned
+        ):
             return
 
         user_id = message.author.id
@@ -162,7 +174,12 @@ class GeneralCog(commands.Cog):
 
         # greeting
         friend_name = self.users.get("friends", {}).get(str(user_id))
-        if is_named or any(word in content for word in ["привет", "хай", "приветик"]):
+        if (
+            is_named
+            or is_mentioned
+            or is_role_mentioned
+            or any(word in content for word in ["привет", "хай", "приветик"])
+        ):
             if friend_name:
                 await message.reply(
                     f"Приветик, **{friend_name}**! 🤗 Рада тебя видеть!"
