@@ -32,23 +32,21 @@ class FunCog(commands.Cog):
         data = self.load_responses()
         q_lower = question.lower()
 
-        chosen_member: discord.Member | None = None
+        chosen_mention: str = ""
         response_text = ""
 
         # scripted responses
         scripted = data.get("scripted_who", [])
         for script in scripted:
             if any(key in q_lower for key in script.get("keys", [])):
-                target_id = int(script.get("user_id", 0))
-                member = guild.get_member(target_id)
-
-                if member:
-                    chosen_member = member
+                target_id = script.get("user_id")
+                if target_id:
+                    chosen_mention = f"<@{target_id}>"
                     response_text = script.get("response", "Без сомнений, это")
                     break
 
         # unscripted random choice
-        if not chosen_member:
+        if not chosen_mention:
             members: list[discord.Member] = []
             author = interaction.user
 
@@ -64,16 +62,24 @@ class FunCog(commands.Cog):
 
             if len(members) < 2:
                 await interaction.response.send_message(
-                    "Тут совсем никого нет... даже выбирать не из кого! 🥺"
+                    "Вас тут слишком мало! Мне нужно хотя бы 2 человека (не ботов), чтобы выбирать. 😅"
                 )
                 return
 
             chosen_member = random.choice(members)
+            chosen_mention = chosen_member.mention
+
             responses = data.get("who_responses", ["Я думаю, это..."])
             response_text = random.choice(responses)
 
+        if not chosen_mention:
+            await interaction.response.send_message(
+                "Я не смогла никого найти, видимо какая-то ошибка... 🥺", ephemeral=True
+            )
+            return
+
         embed = discord.Embed(
-            description=f"❓ **Вопрос:** {question}\n✨ **{response_text}** {chosen_member.mention}!",
+            description=f"❓ **Вопрос:** {question}\n✨ **{response_text}** {chosen_mention}!",
             color=discord.Color.random(),
         )
         await interaction.response.send_message(embed=embed)
