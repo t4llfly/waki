@@ -198,6 +198,9 @@ class MusicCog(commands.Cog):
                 return await interaction.followup.send("❌ Не нашла ничего по запросу.")
 
             if isinstance(tracks, mafic.Playlist):
+                for t in tracks.tracks:
+                    setattr(t, "requester", author)
+
                 player.queue.extend(tracks.tracks)
                 embed = discord.Embed(
                     description=f"📂 Добавила плейлист **{tracks.name}** ({len(tracks.tracks)} песен) в очередь!",
@@ -209,6 +212,7 @@ class MusicCog(commands.Cog):
                 return
 
             track = tracks[0]
+            setattr(track, "requester", author)
 
             if player.current:
                 player.queue.append(track)
@@ -292,16 +296,21 @@ class MusicCog(commands.Cog):
         embed = discord.Embed(title="📃 Очередь песен", color=discord.Color.blurple())
 
         if player.current:
+            req = getattr(player.current, "requester", None)
+            req_name = f" 👤 *{req.display_name}*" if req else ""
             embed.add_field(
                 name="🔊 Сейчас играет:",
-                value=f"**[{player.current.title}]({player.current.uri}) - {player.current.author}**",
+                value=f"**[{player.current.title}]({player.current.uri})**{req_name}",
                 inline=False,
             )
 
         if player.queue:
             queue_text = ""
             for i, track in enumerate(player.queue, start=1):
-                next_line = f"**{i}.** [{track.title}]({track.uri}) ({format_duration(track.length)})\n"
+                req = getattr(track, "requester", None)
+                req_name = f" 👤 *{req.display_name}*" if req else ""
+
+                next_line = f"**{i}.** [{track.title}]({track.uri}) ({format_duration(track.length)}){req_name}\n"
 
                 if len(queue_text) + len(next_line) > 950:
                     queue_text += f"\n*...и еще {len(player.queue) - i + 1} треков*"

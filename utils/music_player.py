@@ -73,6 +73,13 @@ def create_track_embed(track: mafic.Track, position: int = 0) -> discord.Embed:
         embed.set_image(url=artwork)
 
     embed.add_field(name="Канал", value=track.author or "Неизвестно", inline=True)
+
+    requester = getattr(track, "requester", None)
+    if requester and isinstance(requester, discord.Member):
+        embed.set_footer(
+            text=f"Запросил(а): {requester.display_name}",
+            icon_url=requester.display_avatar.url,
+        )
     return embed
 
 
