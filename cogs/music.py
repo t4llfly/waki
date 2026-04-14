@@ -302,7 +302,7 @@ class MusicCog(commands.Cog):
             req_name = f" 👤 *{req.display_name}*" if req else ""
             embed.add_field(
                 name="🔊 Сейчас играет:",
-                value=f"**[{player.current.title}]({player.current.uri})** - {player.current.author} (от {req_name})",
+                value=f"**[{player.current.title}]({player.current.uri})** - {player.current.author}",
                 inline=False,
             )
 
