@@ -75,6 +75,10 @@ class GeneralCog(commands.Cog):
         is_wrong_named = any(
             name in words for name in self.dialogue.get("wrong_name", [])
         )
+        is_forbidden_named = any(
+            name in words for name in self.dialogue.get("forbidden_name", [])
+        )
+
         is_mentioned = self.bot.user in message.mentions
         is_reply_to_bot = (
             message.reference
@@ -95,10 +99,29 @@ class GeneralCog(commands.Cog):
             or is_named
             or is_wrong_named
             or is_role_mentioned
+            or is_forbidden_named
         ):
             return
 
         user_id = message.author.id
+
+        # waka named (forbidden)
+        if is_forbidden_named:
+            if isinstance(message.author, discord.Member):
+                try:
+                    await message.author.timeout(
+                        timedelta(minutes=10), reason="Назвал Ваки 'Вака'"
+                    )
+                    await message.reply(
+                        random.choice(
+                            self.dialogue.get("forbidden_name_replies", ["В мут!"])
+                        )
+                    )
+                except discord.Forbidden:
+                    await message.reply(
+                        "*(Хотела кинуть тебя в мут за 'Вака', но у тебя права админа... Тебе повезло! 😠)*"
+                    )
+            return
 
         # wrong named (shaki instead of waki)
         if is_wrong_named:
@@ -189,7 +212,7 @@ class GeneralCog(commands.Cog):
             else:
                 await message.reply("Приветик! ✨")
 
-        elif is_named or explicit_ping or is_role_mentioned:
+        elif (is_named or explicit_ping or is_role_mentioned) and len(words) <= 3:
             await message.reply(
                 random.choice(self.dialogue.get("name_replies", ["Да, я тут! ✨"]))
             )
