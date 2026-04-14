@@ -198,10 +198,10 @@ class MusicCog(commands.Cog):
                 return await interaction.followup.send("❌ Не нашла ничего по запросу.")
 
             if isinstance(tracks, mafic.Playlist):
-                for t in tracks.tracks:
-                    setattr(t, "requester", author)
+                player.queue.extend(
+                    [{"track": t, "requester": author} for t in tracks.tracks]
+                )
 
-                player.queue.extend(tracks.tracks)
                 embed = discord.Embed(
                     description=f"📂 Добавила плейлист **{tracks.name}** ({len(tracks.tracks)} песен) в очередь!",
                     color=discord.Color.green(),
@@ -215,10 +215,11 @@ class MusicCog(commands.Cog):
             setattr(track, "requester", author)
 
             if player.current:
-                player.queue.append(track)
-                embed = create_track_embed(track)
+                player.queue.append({"track": track, "requester": author})
+                embed = create_track_embed(track, requester=author)
                 return await interaction.followup.send(embed=embed)
 
+            player.current_requester = author
             await player.play(track)
             embed = create_track_embed(track)
             view = MusicControlView(player=player)
@@ -267,7 +268,9 @@ class MusicCog(commands.Cog):
 
         current_pos = int(player.position)
 
-        embed = create_track_embed(player.current, position=current_pos)
+        embed = create_track_embed(
+            player.current, position=current_pos, requester=player.current_requester
+        )
 
         view = MusicControlView(player=player)
 
@@ -306,8 +309,9 @@ class MusicCog(commands.Cog):
 
         if player.queue:
             queue_text = ""
-            for i, track in enumerate(player.queue, start=1):
-                req = getattr(track, "requester", None)
+            for i, item in enumerate(player.queue, start=1):
+                track = item["track"]
+                req = item["requester"]
                 req_name = f" 👤 *{req.display_name}*" if req else ""
 
                 next_line = f"**{i}.** [{track.title}]({track.uri}) ({format_duration(track.length)}){req_name}\n"

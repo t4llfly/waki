@@ -47,7 +47,9 @@ def format_duration(ms: int) -> str:
 
 
 # embed =======================================================================
-def create_track_embed(track: mafic.Track, position: int = 0) -> discord.Embed:
+def create_track_embed(
+    track: mafic.Track, position: int = 0, requester: discord.Member | None = None
+) -> discord.Embed:
     embed = discord.Embed(
         title=track.title,
         description=f"**[Ссылочка на оригинал]({track.uri})**",
@@ -74,8 +76,7 @@ def create_track_embed(track: mafic.Track, position: int = 0) -> discord.Embed:
 
     embed.add_field(name="Канал", value=track.author or "Неизвестно", inline=True)
 
-    requester = getattr(track, "requester", None)
-    if requester and isinstance(requester, discord.Member):
+    if requester:
         embed.set_footer(
             text=f"Запросил(а): {requester.display_name}",
             icon_url=requester.display_avatar.url,
@@ -91,23 +92,27 @@ class MusicPlayer(mafic.Player[commands.Bot]):
         self, client: commands.Bot, channel: discord.VoiceChannel | discord.StageChannel
     ) -> None:
         super().__init__(client, channel)
-        self.queue: list[mafic.Track] = []
+        self.queue: list[dict[str, Any]] = []
         self.text_channel: discord.abc.Messageable | None = None
 
         self._pre_boost_volume: int = 20
         self._is_boosted: bool = False
+        self.current_requester: discord.Member | None = None
 
     async def play_next(self) -> None:
         if not self.queue:
+            self.current_requester = None
             return
 
-        next_track = self.queue.pop(0)
+        item = self.queue.pop(0)
+        next_track = item["track"]
+        self.current_requester = item["requester"]
 
         await self.play(next_track)
 
         channel = self.channel
         if isinstance(channel, discord.TextChannel) or hasattr(channel, "send"):
-            embed = create_track_embed(next_track)
+            embed = create_track_embed(next_track, requester=self.current_requester)
             view = MusicControlView(player=self)
             await channel.send(embed=embed, view=view)  # type: ignore
 
