@@ -212,7 +212,6 @@ class MusicCog(commands.Cog):
                 return
 
             track = tracks[0]
-            setattr(track, "requester", author)
 
             if player.current:
                 player.queue.append({"track": track, "requester": author})
