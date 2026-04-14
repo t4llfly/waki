@@ -298,11 +298,11 @@ class MusicCog(commands.Cog):
         embed = discord.Embed(title="📃 Очередь песен", color=discord.Color.blurple())
 
         if player.current:
-            req = getattr(player.current, "requester", None)
+            req = getattr(player.current, "current_requester", None)
             req_name = f" 👤 *{req.display_name}*" if req else ""
             embed.add_field(
                 name="🔊 Сейчас играет:",
-                value=f"**[{player.current.title}]({player.current.uri})**{req_name}",
+                value=f"**[{player.current.title}]({player.current.uri})** - {player.current.author} (от {req_name})",
                 inline=False,
             )
 
