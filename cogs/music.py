@@ -192,6 +192,16 @@ class MusicCog(commands.Cog):
             if isinstance(interaction.channel, discord.abc.Messageable):
                 player.text_channel = interaction.channel
 
+        is_waki_song = False
+        secret_keywords = ["ваки", "waki", "твоя песня", "любимая", "твой трек"]
+
+        if url.lower() in secret_keywords:
+            url = "https://youtu.be/LSEz6KT026k"
+            is_waki_song = True
+            requester = guild.me
+        else:
+            requester = author
+
         try:
             tracks = await player.fetch_tracks(url)
             if not tracks:
@@ -199,7 +209,7 @@ class MusicCog(commands.Cog):
 
             if isinstance(tracks, mafic.Playlist):
                 player.queue.extend(
-                    [{"track": t, "requester": author} for t in tracks.tracks]
+                    [{"track": t, "requester": requester} for t in tracks.tracks]
                 )
 
                 embed = discord.Embed(
@@ -214,15 +224,31 @@ class MusicCog(commands.Cog):
             track = tracks[0]
 
             if player.current:
-                player.queue.append({"track": track, "requester": author})
-                embed = create_track_embed(track, requester=author)
-                return await interaction.followup.send(embed=embed)
+                player.queue.append({"track": track, "requester": requester})
 
-            player.current_requester = author
+                if is_waki_song:
+                    msg = "Ой, хочешь послушать мою любимую песню? 🥰 Я добавила её в очередь!"
+                    embed = create_track_embed(track, requester=requester)
+                    return await interaction.followup.send(content=msg, embed=embed)
+                else:
+                    embed = create_track_embed(track, requester=requester)
+                    return await interaction.followup.send(embed=embed)
+
+            player.current_requester = requester
             await player.play(track)
-            embed = create_track_embed(track)
+
+            if is_waki_song:
+                msg = "✨ Это моя самая-самая любимая песня. Она очень ценна для меня. Надеюсь, тебе тоже понравится! (づ ◕‿◕ )づ"
+                embed = create_track_embed(track, requester=requester)
+            else:
+                msg = None
+                embed = create_track_embed(track, requester=requester)
+
             view = MusicControlView(player=player)
-            await interaction.followup.send(embed=embed, view=view)
+            if msg:
+                await interaction.followup.send(content=msg, embed=embed, view=view)
+            else:
+                await interaction.followup.send(embed=embed, view=view)
 
         except Exception as e:
             await interaction.followup.send(f"❌ Ошибка: {e}")
