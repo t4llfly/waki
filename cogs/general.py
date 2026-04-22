@@ -212,7 +212,7 @@ class GeneralCog(commands.Cog):
             else:
                 await message.reply("Приветик! ✨")
 
-        elif (is_named or explicit_ping or is_role_mentioned) and len(words) <= 3:
+        elif (is_named or explicit_ping or is_role_mentioned) and len(words) <= 1:
             await message.reply(
                 random.choice(self.dialogue.get("name_replies", ["Да, я тут! ✨"]))
             )
