@@ -98,7 +98,7 @@ class GeneralCog(commands.Cog):
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
-                    "https://api.deepseek.com",
+                    "https://api.deepseek.com/chat/completions",
                     headers=headers,
                     json=payload,
                 ) as resp:
