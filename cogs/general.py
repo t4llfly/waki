@@ -20,6 +20,7 @@ class GeneralCog(commands.Cog):
         self.users = self.load_json("data/users.json")
 
         self.name_strikes = {}
+        self.cooldowns = {}
         self.last_thought_time = datetime.now() - timedelta(hours=2)
         self.status_updater.start()
 
@@ -245,6 +246,14 @@ class GeneralCog(commands.Cog):
             )
             return
 
+        now = datetime.now()
+        last_msg_time = self.cooldowns.get(user_id)
+
+        if last_msg_time and (now - last_msg_time).total_seconds() < 5:
+            return
+
+            self.cooldowns[user_id] = now
+
         async with message.channel.typing():
             response_text = await self.ask_deepseek(
                 message.author.display_name, message.content
@@ -298,7 +307,7 @@ class GeneralCog(commands.Cog):
             title="🥰 Обо мне",
             color=discord.Color.pink(),
             description="Создана вафелькой, чтобы включать его друзьяшкам музыку и быть доброй! Пожалуйста, "
-            + "относитесь ко мне хорошо!",
+            + "относитесь ко мне хорошо! Мои ответы основаны на ИИ (DeepSeek v4), поэтому иногда я могу говорить глупости.",
         )
 
         await interaction.response.send_message(embed=embed)
