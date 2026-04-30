@@ -252,7 +252,7 @@ class GeneralCog(commands.Cog):
         if last_msg_time and (now - last_msg_time).total_seconds() < 5:
             return
 
-            self.cooldowns[user_id] = now
+        self.cooldowns[user_id] = now
 
         async with message.channel.typing():
             response_text = await self.ask_deepseek(
