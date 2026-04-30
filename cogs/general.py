@@ -5,6 +5,7 @@ import string
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
+import aiohttp
 import discord
 from discord import app_commands
 from discord.ext import commands, tasks
@@ -54,6 +55,71 @@ class GeneralCog(commands.Cog):
             await self.bot.change_presence(
                 activity=discord.Streaming(name=status_text, url="https://tallfly.me")
             )
+
+    # deepseek =======================================================================
+    async def ask_deepseek(self, user_name: str, user_text: str) -> str:
+        api_key = os.getenv("DEEPSEEK_API_KEY")
+        if not api_key:
+            return "Ой, у меня случилась небольшая амнезия... (нет API ключа) 🥺"
+
+        system_prompt = (
+            "Ты — Ваки (Waki), милая, дружелюбная и эмоциональная музыкальная Discord-помощница. "
+            "Ты общаешься в женском роде. Обожаешь музыку, печеньки и обнимашки. "
+            "Твой создатель — самый лучший. Ты ненавидишь, когда тебя называют 'Шаки' или 'Вака'. "
+            "Отвечай кратко, живо, как подруга в чате. Используй эмодзи и каомодзи (づ ◕‿◕ )づ, ✨, 🥰."
+        )
+
+        # message history for context (up to 10 messages) ============================================================
+        if not hasattr(self, "chat_history"):
+            self.chat_history = []
+
+        self.chat_history.append(
+            {"role": "user", "content": f"{user_name}: {user_text}"}
+        )
+
+        if len(self.chat_history) > 10:
+            self.chat_history.pop(0)
+
+        messages = [{"role": "system", "content": system_prompt}] + self.chat_history
+        # ============================================================================================================
+
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+
+        payload = {
+            "model": "deepseek-v4-flash",
+            "messages": messages,
+            "max_tokens": 400,
+            "temperature": 0.85,
+        }
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    "https://api.deepseek.com",
+                    headers=headers,
+                    json=payload,
+                ) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        ai_reply = data["choices"][0]["message"]["content"]
+
+                        self.chat_history.append(
+                            {"role": "assistant", "content": ai_reply}
+                        )
+
+                        return ai_reply
+                    else:
+                        error_text = await resp.text()
+                        print(f"⚠️[DeepSeek Error]: {error_text}")
+                        return "Упс... Мои мысли немного запутались (Ошибка нейросети). 😵‍💫"
+        except Exception as e:
+            print(f"⚠️[DeepSeek Exception]: {e}")
+            return "Связь с космосом прервалась! 🌌"
+
+    # =================================================================================
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -176,46 +242,52 @@ class GeneralCog(commands.Cog):
             )
             return
 
-        # hug
-        if any(word in content for word in self.dialogue.get("hug", [])):
-            reply_text = random.choice(
-                self.dialogue.get("hug_replies", ["(づ ◕‿◕ )づ"])
+        async with message.channel.typing():
+            response_text = await self.ask_deepseek(
+                message.author.display_name, message.content
             )
-            hug_file = "data/media/hug.mp4"
-            if os.path.exists(hug_file):
-                await message.reply(content=reply_text, file=discord.File(hug_file))
-            else:
-                await message.reply(reply_text)
-                print(f"⚠️ [DEBUG] Не найдена гифка для обнимашек по пути: {hug_file}")
-            return
+            await message.reply(response_text)
 
-        # simple reactions
-        for reaction in self.dialogue.get("simple_reactions", []):
-            if any(word in content for word in reaction["keys"]):
-                await message.reply(random.choice(reaction["answers"]))
-                return
+        # # hug
+        # if any(word in content for word in self.dialogue.get("hug", [])):
+        #     reply_text = random.choice(
+        #         self.dialogue.get("hug_replies", ["(づ ◕‿◕ )づ"])
+        #     )
+        #     hug_file = "data/media/hug.mp4"
+        #     if os.path.exists(hug_file):
+        #         await message.reply(content=reply_text, file=discord.File(hug_file))
+        #     else:
+        #         await message.reply(reply_text)
+        #         print(f"⚠️ [DEBUG] Не найдена гифка для обнимашек по пути: {hug_file}")
+        #     return
 
-        # greeting
-        friend_name = self.users.get("friends", {}).get(str(user_id))
-        is_greeting = any(word in words for word in ["привет", "хай", "приветик"])
+        # # simple reactions
+        # for reaction in self.dialogue.get("simple_reactions", []):
+        #     if any(word in content for word in reaction["keys"]):
+        #         await message.reply(random.choice(reaction["answers"]))
+        #         return
 
-        bot_id = self.bot.user.id if self.bot.user else 0
+        # # greeting
+        # friend_name = self.users.get("friends", {}).get(str(user_id))
+        # is_greeting = any(word in words for word in ["привет", "хай", "приветик"])
 
-        content_raw = message.content
-        explicit_ping = f"<@{bot_id}>" in content_raw or f"<@!{bot_id}>" in content_raw
+        # bot_id = self.bot.user.id if self.bot.user else 0
 
-        if is_greeting:
-            if friend_name:
-                await message.reply(
-                    f"Приветик, **{friend_name}**! 🤗 Рада тебя видеть!"
-                )
-            else:
-                await message.reply("Приветик! ✨")
+        # content_raw = message.content
+        # explicit_ping = f"<@{bot_id}>" in content_raw or f"<@!{bot_id}>" in content_raw
 
-        elif (is_named or explicit_ping or is_role_mentioned) and len(words) <= 1:
-            await message.reply(
-                random.choice(self.dialogue.get("name_replies", ["Да, я тут! ✨"]))
-            )
+        # if is_greeting:
+        #     if friend_name:
+        #         await message.reply(
+        #             f"Приветик, **{friend_name}**! 🤗 Рада тебя видеть!"
+        #         )
+        #     else:
+        #         await message.reply("Приветик! ✨")
+
+        # elif (is_named or explicit_ping or is_role_mentioned) and len(words) <= 1:
+        #     await message.reply(
+        #         random.choice(self.dialogue.get("name_replies", ["Да, я тут! ✨"]))
+        #     )
 
     @app_commands.command(name="about", description="Расскажу о себе")
     async def about(self, interaction: discord.Interaction) -> None:
