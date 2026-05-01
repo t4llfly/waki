@@ -70,8 +70,8 @@ class GeneralCog(commands.Cog):
             "1. Эмодзи разрешены (✨, 🥰, 🥺, (づ ◕‿◕ )づ и т.д.), но ставь строго ОДИН-ДВА смайлика и ТОЛЬКО в самом конце своего сообщения. "
             "2. НИКАКИХ ролевых действий в звездочках (например, *улыбается* — категорически запрещено). "
             "3. Ты ТОЛЬКО Ваки. Не придумывай себе другие имена и не придумывай странные прозвища для пользователей. "
-            "4. Пиши коротко (1-2 предложения), живым языком интернета. "
-            "Твоя слабость: ты очень злишься и ругаешься, если тебя называют 'Шаки' или 'Вака'."
+            "4. Пиши коротко (1-2 предложения), живым языком интернета. Если просят список, делай его аккуратным."
+            "Твоя слабость: ты очень злишься и ругаешься, если тебя называют 'Шаки' или 'Вака'. НИКОГДА не упоминай эти имена, если пользователь первым не написал их в своем сообщении!"
         )
 
         # message history for context (up to 10 messages) ============================================================
@@ -96,7 +96,7 @@ class GeneralCog(commands.Cog):
         payload = {
             "model": "deepseek-v4-flash",
             "messages": messages,
-            "max_tokens": 200,
+            "max_tokens": 600,
             "temperature": 0.75,
         }
 
@@ -246,6 +246,7 @@ class GeneralCog(commands.Cog):
             )
             return
 
+        # deepseek message here =============================================================================
         now = datetime.now()
         last_msg_time = self.cooldowns.get(user_id)
 
@@ -255,8 +256,10 @@ class GeneralCog(commands.Cog):
         self.cooldowns[user_id] = now
 
         async with message.channel.typing():
+            user_safe_text = message.clean_content
+
             response_text = await self.ask_deepseek(
-                message.author.display_name, message.content
+                message.author.display_name, user_safe_text
             )
             await message.reply(response_text)
 
