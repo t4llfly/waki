@@ -198,7 +198,7 @@ class MusicCog(commands.Cog):
         secret_keywords = ["ваки", "waki", "твоя песня", "любимая", "твой трек"]
 
         if url.lower() in secret_keywords:
-            url = "ytsearch:LSEz6KT026k"
+            url = "ytsearch: hoyomix fantastical colored heartbeat"
             # url = "https://youtu.be/LSEz6KT026k"
             is_waki_song = True
             requester = guild.me
@@ -211,7 +211,7 @@ class MusicCog(commands.Cog):
 
         if match and "list=" not in url:
             video_id = match.group(1)
-            url = f"ytsearch:{video_id}"
+            url = f"https://music.youtube.com/watch?v={video_id}"
 
         try:
             tracks = await player.fetch_tracks(url)
