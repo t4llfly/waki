@@ -1,5 +1,6 @@
 import os
 import random
+import re
 from typing import cast
 
 import discord
@@ -192,15 +193,25 @@ class MusicCog(commands.Cog):
             if isinstance(interaction.channel, discord.abc.Messageable):
                 player.text_channel = interaction.channel
 
+        # song easter egg ================================================================
         is_waki_song = False
         secret_keywords = ["ваки", "waki", "твоя песня", "любимая", "твой трек"]
 
         if url.lower() in secret_keywords:
-            url = "https://youtu.be/LSEz6KT026k"
+            url = "ytsearch:LSEz6KT026k"
+            # url = "https://youtu.be/LSEz6KT026k"
             is_waki_song = True
             requester = guild.me
         else:
             requester = author
+
+        # youtube url block fix ===========================================================
+        yt_regex = r"(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^\"&?\/\s]{11})"
+        match = re.search(yt_regex, url)
+
+        if match and "list=" not in url:
+            video_id = match.group(1)
+            url = f"ytsearch:{video_id}"
 
         try:
             tracks = await player.fetch_tracks(url)
