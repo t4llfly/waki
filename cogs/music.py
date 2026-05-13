@@ -199,31 +199,31 @@ class MusicCog(commands.Cog):
         secret_keywords = ["ваки", "waki", "твоя песня", "любимая", "твой трек"]
 
         if url.lower() in secret_keywords:
-            url = "ytsearch: nangong yu ep"
-            # url = "https://youtu.be/LSEz6KT026k"
+            # url = "ytsearch: nangong yu ep"
+            url = "https://youtu.be/LSEz6KT026k"
             is_waki_song = True
             requester = guild.me
         else:
             requester = author
 
-        # youtube url block fix ===========================================================
-        yt_regex = r"(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^\"&?\/\s]{11})"
-        match = re.search(yt_regex, url)
+        # # youtube url block fix ===========================================================
+        # yt_regex = r"(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^\"&?\/\s]{11})"
+        # match = re.search(yt_regex, url)
 
-        if match and "list=" not in url and not is_waki_song:
-            video_id = match.group(1)
-            oembed_url = f"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={video_id}&format=json"
-            try:
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(oembed_url) as resp:
-                        if resp.status == 200:
-                            data = await resp.json()
-                            video_title = data.get("title")
-                            if video_title:
-                                url = f"ytsearch:{video_title}"
-                                print(f"🔧 [ХАК] Заменила ссылку на поиск: {url}")
-            except Exception as e:
-                print(f"⚠️ Ошибка OEmbed обхода: {e}")
+        # if match and "list=" not in url and not is_waki_song:
+        #     video_id = match.group(1)
+        #     oembed_url = f"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={video_id}&format=json"
+        #     try:
+        #         async with aiohttp.ClientSession() as session:
+        #             async with session.get(oembed_url) as resp:
+        #                 if resp.status == 200:
+        #                     data = await resp.json()
+        #                     video_title = data.get("title")
+        #                     if video_title:
+        #                         url = f"ytsearch:{video_title}"
+        #                         print(f"🔧 [ХАК] Заменила ссылку на поиск: {url}")
+        #     except Exception as e:
+        #         print(f"⚠️ Ошибка OEmbed обхода: {e}")
 
         try:
             tracks = await player.fetch_tracks(url)
