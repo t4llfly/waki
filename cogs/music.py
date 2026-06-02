@@ -59,6 +59,10 @@ class MusicCog(commands.Cog):
                 "data/media/tsundere.mp4",
             ),
             "きゅうくらりん": ("", "data/media/kyu-kurarin.mp4"),
+            "tick tock": (
+                "💪 Tick Tock, Heavy like a Brink's truck, Looking like I'm tip-top, Shining like a wristwatch 💪",
+                "data/media/mge.mp4",
+            ),
         }
 
         for trigger, (message, file_path) in special_triggers.items():
