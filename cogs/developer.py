@@ -133,6 +133,21 @@ class DeveloperCog(commands.Cog):
         except Exception as e:
             await interaction.followup.send(f"❌ Ошибка при переподключении: {e}")
 
+    @dev_group.command(
+        name="restart",
+        description="Полностью перезагружусь",
+    )
+    @app_commands.default_permissions(administrator=True)
+    async def restart(self, interaction: discord.Interaction) -> None:
+        await interaction.response.send_message(
+            "🔄 Ушла на перезагрузку! Вернусь буквально через пару секунд... ✨",
+            ephemeral=True,
+        )
+
+        await self.bot.change_presence(status=discord.Status.offline)
+        print("🔄 [SYSTEM] Получена команда на перезагрузку. Отключаюсь...")
+        await self.bot.close()
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(DeveloperCog(bot))
