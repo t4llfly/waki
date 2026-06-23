@@ -1,9 +1,7 @@
 import os
 import random
-import re
 from typing import cast
 
-import aiohttp
 import discord
 import mafic
 from discord import app_commands
@@ -67,7 +65,7 @@ class MusicCog(commands.Cog):
 
         for trigger, (message, file_path) in special_triggers.items():
             if trigger in title_low:
-                print(f"🎯 [DEBUG] Нашли совпадение с триггером: {trigger}")
+                print(f"[DEBUG] Нашли совпадение с триггером: {trigger}")
 
                 if not player.text_channel:
                     print(
@@ -83,10 +81,10 @@ class MusicCog(commands.Cog):
                     await player.text_channel.send(
                         content=message, file=discord.File(file_path)
                     )
-                    print("✅ [DEBUG] Пасхалка успешно отправлена в чат!")
+                    print("[DEBUG] Пасхалка успешно отправлена в чат!")
                     break
                 except Exception as e:
-                    print(f"⚠️ [DEBUG] Ошибка при отправке в Discord: {e}")
+                    print(f"[DEBUG] Ошибка при отправке в Discord: {e}")
 
     @commands.Cog.listener()
     async def on_track_end(self, event: mafic.TrackEndEvent[MusicPlayer]) -> None:
@@ -420,7 +418,7 @@ class MusicCog(commands.Cog):
             try:
                 await player.disconnect()
             except Exception as e:
-                print(f"⚠️ [DEBUG] Ошибка Lavalink при выходе (игнорируем): {e}")
+                print(f"[DEBUG] Ошибка Lavalink при выходе (игнорируем): {e}")
                 if guild.voice_client:
                     await guild.change_voice_state(channel=None)
 
