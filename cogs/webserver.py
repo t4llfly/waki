@@ -41,13 +41,13 @@ class WebserverCog(commands.Cog):
         )
 
     async def get_player(self, request: web.Request) -> web.Response:
-        if not self.bot.guilds:
-            return web.json_response({"error": "Бот не на сервере"}, status=400)
+        player = None
+        for vc in self.bot.voice_clients:
+            if getattr(vc, "connected", False):
+                player = cast(MusicPlayer, vc)
+                break
 
-        guild = self.bot.guilds[0]
-        player = cast(MusicPlayer, guild.voice_client)
-
-        if not player or not player.connected:
+        if not player:
             return web.json_response({"is_playing": False})
 
         channel_name = (
