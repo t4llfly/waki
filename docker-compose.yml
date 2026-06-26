@@ -26,7 +26,7 @@ services:
         max-file: "3"
 
   web_panel:
-    build: ./frontend
+    build: ./wakiwebplayer
     container_name: waki_web_panel
     restart: unless-stopped
     depends_on:
@@ -34,4 +34,4 @@ services:
     ports:
       - "6767:3000"
     env_file:
-      - ./frontend/.env
+      - ./wakiwebplayer/.env
