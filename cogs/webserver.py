@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import os
 from typing import cast
 
 import discord
@@ -8,6 +10,8 @@ from aiohttp import web
 from discord.ext import commands, tasks
 
 from utils.music_player import MusicPlayer
+
+ADMIN_IDS = [int(i.strip()) for i in os.getenv("ADMIN_IDS", "").split(",") if i.strip()]
 
 
 class WebserverCog(commands.Cog):
@@ -34,6 +38,7 @@ class WebserverCog(commands.Cog):
         self.app.router.add_get("/api/ws", self.websocket_handler)
         self.app.router.add_post("/api/skip", self.post_skip)
         self.app.router.add_post("/api/play", self.post_play)
+        self.app.router.add_post("/api/restart", self.post_restart)
 
     def get_player_data(self) -> dict:
         player = None
@@ -49,10 +54,13 @@ class WebserverCog(commands.Cog):
             getattr(player.channel, "name", "Unknown") if player.channel else "Unknown"
         )
 
+        raw_volume = getattr(player, "volume", 20)
+        display_volume = raw_volume if raw_volume <= 100 else round(raw_volume / 10)
+
         data = {
             "is_playing": player.current is not None,
             "is_paused": player.paused,
-            "volume": getattr(player, "volume", 20),
+            "volume": display_volume,
             "channel_name": channel_name,
         }
 
@@ -181,6 +189,30 @@ class WebserverCog(commands.Cog):
                 await player.play(track)
 
             return web.json_response({"success": True, "title": track.title})
+        except Exception as e:
+            return web.json_response({"error": str(e)}, status=500)
+
+    async def post_restart(self, request: web.Request) -> web.Response:
+        try:
+            data = await request.json()
+            user_id = int(data.get("user_id", 0))
+
+            if user_id not in ADMIN_IDS:
+                return web.json_response(
+                    {"error": "У тебя нет прав для такого! 😠"}, status=403
+                )
+
+            print(f"Перезагрузка по просьбе пользователя {user_id}")
+
+            async def shutdown():
+                await asyncio.sleep(1)
+                await self.bot.close()
+
+            asyncio.create_task(shutdown())
+            return web.json_response(
+                {"success": True, "message": "Я перезагружаюсь..."}
+            )
+
         except Exception as e:
             return web.json_response({"error": str(e)}, status=500)
 

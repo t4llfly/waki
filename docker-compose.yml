@@ -24,3 +24,14 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+  web_panel:
+    build: ./frontend
+    container_name: waki_web_panel
+    restart: unless-stopped
+    depends_on:
+      - music_bot
+    ports:
+      - "6767:3000"
+    env_file:
+      - ./frontend/.env
