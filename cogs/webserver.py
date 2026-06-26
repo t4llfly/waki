@@ -35,10 +35,10 @@ class WebserverCog(commands.Cog):
         return response
 
     def setup_routes(self):
-        self.app.router.add_get("/api/ws", self.websocket_handler)
-        self.app.router.add_post("/api/skip", self.post_skip)
-        self.app.router.add_post("/api/play", self.post_play)
-        self.app.router.add_post("/api/restart", self.post_restart)
+        self.app.router.add_get("/bot/ws", self.websocket_handler)
+        self.app.router.add_post("/bot/skip", self.post_skip)
+        self.app.router.add_post("/bot/play", self.post_play)
+        self.app.router.add_post("/bot/restart", self.post_restart)
 
     def get_player_data(self) -> dict:
         player = None
