@@ -50,7 +50,6 @@ class WebserverCog(commands.Cog):
 
     def setup_routes(self):
         self.app.router.add_get("/bot/ws", self.websocket_handler)
-        self.app.router.add_post("/bot/restart", self.post_restart)
 
     # state & broadcast =============================================================
 
@@ -122,6 +121,26 @@ class WebserverCog(commands.Cog):
                 )
 
         data["queue"] = queue_data
+
+        voice_members = []
+        if (
+            player
+            and player.channel
+            and isinstance(player.channel, (discord.VoiceChannel, discord.StageChannel))
+        ):
+            for member in player.channel.members:
+                if not member.bot and member.voice:
+                    voice_members.append(
+                        {
+                            "id": str(member.id),
+                            "name": member.display_name,
+                            "avatar": member.display_avatar.url,
+                            "is_muted": member.voice.self_mute or member.voice.mute,
+                            "is_deafened": member.voice.self_deaf or member.voice.deaf,
+                        }
+                    )
+
+        data["voice_members"] = voice_members
         return data
 
     async def broadcast(self, event: str, data: dict):
@@ -163,6 +182,12 @@ class WebserverCog(commands.Cog):
             result = await self.cmd_resume()
         elif action == "stop":
             result = await self.cmd_stop()
+        elif action == "remove_track":
+            result = await self.cmd_remove_track(payload)
+        elif action == "clear_queue":
+            result = await self.cmd_clear_queue()
+        elif action == "move_track":
+            result = await self.cmd_move_track(payload)
         else:
             result = {"error": f"Unknown action: {action}"}
 
@@ -171,7 +196,15 @@ class WebserverCog(commands.Cog):
                 {"event": "COMMAND_RESULT", "request_id": request_id, "data": result}
             )
 
-        if "error" not in result and action in ["volume", "pause", "resume", "stop"]:
+        if "error" not in result and action in [
+            "volume",
+            "pause",
+            "resume",
+            "stop",
+            "remove_track",
+            "clear_queue",
+            "move_track",
+        ]:
             await self.send_state_update()
 
     # ===============================================================================
@@ -284,6 +317,46 @@ class WebserverCog(commands.Cog):
                 return {"success": True}
         return {"error": "Player not found"}
 
+    async def cmd_remove_track(self, payload: dict) -> dict:
+        index = payload.get("index")
+        if index is None:
+            return {"error": "Не указан индекс трека"}
+
+        for vc in self.bot.voice_clients:
+            if getattr(vc, "connected", False):
+                player = cast(MusicPlayer, vc)
+                if 0 <= index < len(player.queue):
+                    player.queue.pop(index)
+                    return {"success": True}
+                return {"error": "Трека с таким номером нет в очереди"}
+        return {"error": "Плеер не найден"}
+
+    async def cmd_clear_queue(self) -> dict:
+        for vc in self.bot.voice_clients:
+            if getattr(vc, "connected", False):
+                player = cast(MusicPlayer, vc)
+                player.queue.clear()
+                return {"success": True}
+        return {"error": "Плеер не найден"}
+
+    async def cmd_move_track(self, payload: dict) -> dict:
+        from_index = payload.get("from_index")
+        to_index = payload.get("to_index")
+
+        if from_index is None or to_index is None:
+            return {"error": "Не указаны индексы"}
+
+        for vc in self.bot.voice_clients:
+            if getattr(vc, "connected", False):
+                player = cast(MusicPlayer, vc)
+                queue_len = len(player.queue)
+                if 0 <= from_index < queue_len and 0 <= to_index < queue_len:
+                    track = player.queue.pop(from_index)
+                    player.queue.insert(to_index, track)
+                    return {"success": True}
+                return {"error": "Неверные индексы"}
+        return {"error": "Плеер не найден"}
+
     # ===============================================================================
 
     async def websocket_handler(self, request: web.Request) -> web.WebSocketResponse:
@@ -310,6 +383,28 @@ class WebserverCog(commands.Cog):
     # event listeners ===============================================================
 
     @commands.Cog.listener()
+    async def on_voice_state_update(
+        self,
+        member: discord.Member,
+        before: discord.VoiceState,
+        after: discord.VoiceState,
+    ) -> None:
+        if member.bot:
+            return
+
+        player = None
+        for vc in self.bot.voice_clients:
+            if getattr(vc, "connected", False):
+                player = cast(MusicPlayer, vc)
+                break
+
+        if not player or not player.channel:
+            return
+
+        if before.channel == player.channel or after.channel == player.channel:
+            await self.send_state_update()
+
+    @commands.Cog.listener()
     async def on_track_start(self, event: mafic.TrackStartEvent[MusicPlayer]) -> None:
         await self.send_state_update()
 
@@ -324,26 +419,26 @@ class WebserverCog(commands.Cog):
 
     # ===============================================================================
 
-    async def post_restart(self, request: web.Request) -> web.Response:
-        try:
-            data = await request.json()
-            user_id = int(data.get("user_id", 0))
-            if user_id not in ADMIN_IDS:
-                return web.json_response(
-                    {"error": "У тебя нет прав для такого! 😠"}, status=403
-                )
-            print(f"Перезагрузка по просьбе пользователя {user_id}")
+    # async def post_restart(self, request: web.Request) -> web.Response:
+    #     try:
+    #         data = await request.json()
+    #         user_id = int(data.get("user_id", 0))
+    #         if user_id not in ADMIN_IDS:
+    #             return web.json_response(
+    #                 {"error": "У тебя нет прав для такого! 😠"}, status=403
+    #             )
+    #         print(f"Перезагрузка по просьбе пользователя {user_id}")
 
-            async def shutdown():
-                await asyncio.sleep(1)
-                await self.bot.close()
+    #         async def shutdown():
+    #             await asyncio.sleep(1)
+    #             await self.bot.close()
 
-            asyncio.create_task(shutdown())
-            return web.json_response(
-                {"success": True, "message": "Я перезагружаюсь..."}
-            )
-        except Exception as e:
-            return web.json_response({"error": str(e)}, status=500)
+    #         asyncio.create_task(shutdown())
+    #         return web.json_response(
+    #             {"success": True, "message": "Я перезагружаюсь..."}
+    #         )
+    #     except Exception as e:
+    #         return web.json_response({"error": str(e)}, status=500)
 
     @tasks.loop(seconds=2)
     async def position_broadcast_task(self):
