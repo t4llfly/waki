@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import os
-from typing import cast
+from typing import Any, cast
 
 import discord
 import mafic
@@ -18,10 +19,9 @@ class WebserverCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.app = web.Application(middlewares=[self.cors_middleware])
-        self.websockets = set()
+        self.websockets: set[web.WebSocketResponse] = set()
         self.setup_routes()
-        self.runner = None
-        self.broadcast_task.start()
+        self.runner: web.AppRunner | None = None
 
     @web.middleware
     async def cors_middleware(self, request, handler):
@@ -36,11 +36,11 @@ class WebserverCog(commands.Cog):
 
     def setup_routes(self):
         self.app.router.add_get("/bot/ws", self.websocket_handler)
-        self.app.router.add_post("/bot/skip", self.post_skip)
-        self.app.router.add_post("/bot/play", self.post_play)
         self.app.router.add_post("/bot/restart", self.post_restart)
 
-    def get_player_data(self) -> dict:
+    # state & broadcast =============================================================
+
+    def get_full_state(self) -> dict:
         player = None
         for vc in self.bot.voice_clients:
             if getattr(vc, "connected", False):
@@ -48,34 +48,48 @@ class WebserverCog(commands.Cog):
                 break
 
         if not player:
-            return {"is_playing": False}
+            return {
+                "is_playing": False,
+                "is_paused": False,
+                "volume": 20,
+                "channel_name": None,
+                "current": None,
+                "queue": [],
+            }
 
         channel_name = (
             getattr(player.channel, "name", "Unknown") if player.channel else "Unknown"
         )
-
         raw_volume = getattr(player, "volume", 20)
         display_volume = raw_volume if raw_volume <= 100 else round(raw_volume / 10)
 
-        data = {
+        data: dict[str, Any] = {
             "is_playing": player.current is not None,
             "is_paused": player.paused,
             "volume": display_volume,
             "channel_name": channel_name,
+            "current": None,
+            "queue": [],
         }
 
         if player.current:
             track = player.current
             req = getattr(player, "current_requester", None)
+
+            artwork = track.artwork_url
+            if "youtube.com" in str(track.uri) or "youtu.be" in str(track.uri):
+                artwork = f"https://i.ytimg.com/vi/{track.identifier}/maxresdefault.jpg"
+
             data["current"] = {
                 "title": track.title,
                 "author": track.author,
                 "uri": track.uri,
                 "position_ms": player.position,
                 "length_ms": track.length,
-                "artwork": track.artwork_url
-                or f"https://i.ytimg.com/vi/{track.identifier}/maxresdefault.jpg",
-                "requester": getattr(req, "display_name", "Unknown"),
+                "artwork": artwork,
+                "requester": getattr(req, "display_name", "Unknown")
+                if req
+                else "Unknown",
             }
 
         queue_data = []
@@ -87,121 +101,217 @@ class WebserverCog(commands.Cog):
                     {
                         "title": t.title,
                         "length_ms": t.length,
-                        "requester": getattr(r, "display_name", "Unknown"),
+                        "requester": getattr(r, "display_name", "Unknown")
+                        if r
+                        else "Unknown",
                     }
                 )
 
         data["queue"] = queue_data
         return data
 
-    async def websocket_handler(self, request: web.Request) -> web.WebSocketResponse:
-        ws = web.WebSocketResponse()
-        await ws.prepare(request)
-
-        self.websockets.add(ws)
-        await ws.send_json(self.get_player_data())
-
-        try:
-            async for msg in ws:
-                pass
-        finally:
-            self.websockets.remove(ws)
-        return ws
-
-    @tasks.loop(seconds=1)
-    async def broadcast_task(self):
+    async def broadcast(self, event: str, data: dict):
         if not self.websockets:
             return
 
-        data = self.get_player_data()
-        for ws in list(self.websockets):
+        packet = json.dumps({"event": event, "data": data})
+        closed_ws = set()
+
+        for ws in self.websockets:
             try:
-                await ws.send_json(data)
+                await ws.send_str(packet)
             except Exception:
-                self.websockets.remove(ws)
+                closed_ws.add(ws)
+        self.websockets -= closed_ws
 
-    async def post_skip(self, request: web.Request) -> web.Response:
-        for vc in self.bot.voice_clients:
-            if getattr(vc, "connected", False):
-                player = cast(MusicPlayer, vc)
-                if player.current:
-                    await player.stop()
-                    return web.json_response({"success": True})
-        return web.json_response({"error": "Nothing is playing"}, status=400)
+    async def send_state_update(self):
+        await self.broadcast("PLAYER_STATE", self.get_full_state())
 
-    async def post_play(self, request: web.Request) -> web.Response:
-        data = await request.json()
-        url = data.get("url")
-        user_id = data.get("user_id")
+    # ===============================================================================
 
+    # commands handling =============================================================
+
+    async def handle_ws_message(self, ws: web.WebSocketResponse, msg: dict):
+        action = msg.get("action")
+        payload = msg.get("payload", {})
+        request_id = msg.get("request_id")
+
+        # Роутер команд
+        if action == "play":
+            result = await self.cmd_play(payload)
+        elif action == "skip":
+            result = await self.cmd_skip(payload)
+        elif action == "volume":
+            result = await self.cmd_volume(payload)
+        elif action == "pause":
+            result = await self.cmd_pause()
+        elif action == "resume":
+            result = await self.cmd_resume()
+        elif action == "stop":
+            result = await self.cmd_stop()
+        else:
+            result = {"error": f"Unknown action: {action}"}
+
+        if request_id:
+            await ws.send_json(
+                {"event": "COMMAND_RESULT", "request_id": request_id, "data": result}
+            )
+
+        if "error" not in result and action in ["volume", "pause", "resume", "stop"]:
+            await self.send_state_update()
+
+    # ===============================================================================
+
+    # commands ======================================================================
+
+    async def cmd_play(self, payload: dict) -> dict:
+        url = payload.get("url")
+        user_id = payload.get("user_id")
         if not url or not user_id:
-            return web.json_response({"error": "Missing URL or user_id"}, status=400)
+            return {"error": "Missing URL or user_id"}
 
-        guild: discord.Guild | None = None
-        member: discord.Member | None = None
-        voice_channel: discord.VoiceChannel | discord.StageChannel | None = None
-
-        member = None
-        guild = None
+        guild, member, voice_channel = None, None, None
         for g in self.bot.guilds:
             m = g.get_member(int(user_id))
-            if m and m.voice and m.voice.channel:
-                if isinstance(
+            if (
+                m
+                and m.voice
+                and m.voice.channel
+                and isinstance(
                     m.voice.channel, (discord.VoiceChannel, discord.StageChannel)
-                ):
-                    guild = g
-                    member = m
-                    voice_channel = m.voice.channel
-                    break
+                )
+            ):
+                guild, member, voice_channel = g, m, m.voice.channel
+                break
 
         if not guild or not member or not voice_channel:
-            return web.json_response(
-                {"error": "Сначала зайди в голосовой канал в Дискорде!"}, status=400
-            )
+            return {"error": "Сначала зайди в голосовой канал!"}
 
         player: MusicPlayer
         voice_client = guild.voice_client
-
         if not voice_client:
-            from typing import Any
-
             vc = await voice_channel.connect(cls=cast(Any, MusicPlayer))
             player = cast(MusicPlayer, vc)
             await player.set_volume(20)
+            if guild.text_channels:
+                player.text_channel = guild.text_channels[0]
         else:
             player = cast(MusicPlayer, voice_client)
 
         try:
             tracks = await player.fetch_tracks(url)
             if not tracks:
-                return web.json_response({"error": "Трек не найден"}, status=404)
+                return {"error": "Трек не найден"}
 
-            track = (
-                tracks[0]
-                if not isinstance(tracks, mafic.Playlist)
-                else tracks.tracks[0]
-            )
-
-            if player.current:
-                player.queue.append({"track": track, "requester": member})
+            is_playlist = isinstance(tracks, mafic.Playlist)
+            if is_playlist:
+                for t in tracks.tracks:
+                    player.queue.append({"track": t, "requester": member})
             else:
-                player.current_requester = member
-                await player.play(track)
+                track = tracks[0]
+                if player.current:
+                    player.queue.append({"track": track, "requester": member})
+                else:
+                    player.current_requester = member
+                    await player.play(track)
 
-            return web.json_response({"success": True, "title": track.title})
+            await self.send_state_update()
+            title = tracks.name if is_playlist else tracks[0].title
+            return {"success": True, "title": title, "is_playlist": is_playlist}
         except Exception as e:
-            return web.json_response({"error": str(e)}, status=500)
+            return {"error": str(e)}
+
+    async def cmd_skip(self, payload: dict) -> dict:
+        for vc in self.bot.voice_clients:
+            if getattr(vc, "connected", False):
+                player = cast(MusicPlayer, vc)
+                if player.current:
+                    await player.stop()
+                    return {"success": True}
+        return {"error": "Nothing is playing"}
+
+    async def cmd_volume(self, payload: dict) -> dict:
+        level = payload.get("level")
+        if level is None:
+            return {"error": "Missing level"}
+        for vc in self.bot.voice_clients:
+            if getattr(vc, "connected", False):
+                player = cast(MusicPlayer, vc)
+                await player.set_volume(int(level))
+                return {"success": True, "level": level}
+        return {"error": "Player not found"}
+
+    async def cmd_pause(self) -> dict:
+        for vc in self.bot.voice_clients:
+            if getattr(vc, "connected", False):
+                player = cast(MusicPlayer, vc)
+                if player.current and not player.paused:
+                    await player.pause()
+                    return {"success": True}
+        return {"error": "Nothing to pause"}
+
+    async def cmd_resume(self) -> dict:
+        for vc in self.bot.voice_clients:
+            if getattr(vc, "connected", False):
+                player = cast(MusicPlayer, vc)
+                if player.current and player.paused:
+                    await player.resume()
+                    return {"success": True}
+        return {"error": "Nothing to resume"}
+
+    async def cmd_stop(self) -> dict:
+        for vc in self.bot.voice_clients:
+            if getattr(vc, "connected", False):
+                player = cast(MusicPlayer, vc)
+                player.queue.clear()
+                await player.stop()
+                return {"success": True}
+        return {"error": "Player not found"}
+
+    # ===============================================================================
+
+    async def websocket_handler(self, request: web.Request) -> web.WebSocketResponse:
+        ws = web.WebSocketResponse()
+        await ws.prepare(request)
+        self.websockets.add(ws)
+
+        await ws.send_json({"event": "INITIAL_STATE", "data": self.get_full_state()})
+
+        try:
+            async for msg in ws:
+                if msg.type == web.WSMsgType.TEXT:
+                    try:
+                        data = msg.json()
+                        asyncio.create_task(self.handle_ws_message(ws, data))
+                    except Exception as e:
+                        print(f"Ошибка WS сообщения: {e}")
+                elif msg.type == web.WSMsgType.ERROR:
+                    break
+        finally:
+            self.websockets.remove(ws)
+        return ws
+
+    # event listeners ===============================================================
+
+    @commands.Cog.listener()
+    async def on_track_start(self, event: mafic.TrackStartEvent[MusicPlayer]) -> None:
+        await self.send_state_update()
+
+    @commands.Cog.listener()
+    async def on_track_end(self, event: mafic.TrackEndEvent[MusicPlayer]) -> None:
+        await asyncio.sleep(0.5)
+        await self.send_state_update()
+
+    # ===============================================================================
 
     async def post_restart(self, request: web.Request) -> web.Response:
         try:
             data = await request.json()
             user_id = int(data.get("user_id", 0))
-
             if user_id not in ADMIN_IDS:
                 return web.json_response(
                     {"error": "У тебя нет прав для такого! 😠"}, status=403
                 )
-
             print(f"Перезагрузка по просьбе пользователя {user_id}")
 
             async def shutdown():
@@ -212,7 +322,6 @@ class WebserverCog(commands.Cog):
             return web.json_response(
                 {"success": True, "message": "Я перезагружаюсь..."}
             )
-
         except Exception as e:
             return web.json_response({"error": str(e)}, status=500)
 
@@ -223,7 +332,6 @@ class WebserverCog(commands.Cog):
         await site.start()
 
     async def cog_unload(self):
-        self.broadcast_task.cancel()
         for ws in set(self.websockets):
             await ws.close()
         if self.runner:
