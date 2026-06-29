@@ -94,10 +94,19 @@ class MusicPlayer(mafic.Player[commands.Bot]):
         super().__init__(client, channel)
         self.queue: list[dict[str, Any]] = []
         self.text_channel: discord.abc.Messageable | None = None
-
         self._pre_boost_volume: int = 20
         self._is_boosted: bool = False
         self.current_requester: discord.Member | None = None
+        self._volume: int = 20
+
+    async def set_volume(self, volume: int) -> None:
+        self._volume = volume
+        await super().set_volume(volume)
+        self.notify_update()
+
+    @property
+    def volume(self) -> int:
+        return self._volume
 
     def notify_update(self) -> None:
         self.client.dispatch("player_update")
