@@ -25,11 +25,25 @@ class WebserverCog(commands.Cog):
 
     @web.middleware
     async def cors_middleware(self, request, handler):
+        allowed_origins = [
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "https://waki.tallfly.me",
+        ]
+
+        origin = request.headers.get("Origin", "")
+
         if request.method == "OPTIONS":
             response = web.Response()
         else:
             response = await handler(request)
-        response.headers["Access-Control-Allow-Origin"] = "*"
+
+        if origin in allowed_origins:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+        else:
+            response.headers["Access-Control-Allow-Origin"] = "*"
+
         response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
         response.headers["Access-Control-Allow-Headers"] = "*"
         return response
