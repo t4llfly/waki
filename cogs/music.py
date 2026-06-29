@@ -261,6 +261,7 @@ class MusicCog(commands.Cog):
 
             player.current_requester = requester
             await player.play(track)
+            player.notify_update()
 
             if is_waki_song:
                 msg = "✨ Это моя самая-самая любимая песня. Она очень ценна для меня. Надеюсь, тебе тоже понравится! (づ ◕‿◕ )づ"

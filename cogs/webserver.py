@@ -8,7 +8,7 @@ from typing import Any, cast
 import discord
 import mafic
 from aiohttp import web
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 from utils.music_player import MusicPlayer
 
@@ -229,7 +229,9 @@ class WebserverCog(commands.Cog):
                     player.current_requester = member
                     await player.play(track)
 
+            await asyncio.sleep(0.5)
             await self.send_state_update()
+
             title = tracks.name if is_playlist else tracks[0].title
             return {"success": True, "title": title, "is_playlist": is_playlist}
         except Exception as e:
@@ -343,13 +345,41 @@ class WebserverCog(commands.Cog):
         except Exception as e:
             return web.json_response({"error": str(e)}, status=500)
 
+    @tasks.loop(seconds=2)
+    async def position_broadcast_task(self):
+        if not self.websockets:
+            return
+
+        player = None
+        for vc in self.bot.voice_clients:
+            if getattr(vc, "connected", False):
+                player = cast(MusicPlayer, vc)
+                break
+
+        if not player or not player.current or player.paused:
+            return
+
+        packet = json.dumps(
+            {"event": "POSITION_UPDATE", "data": {"position_ms": player.position}}
+        )
+
+        closed_ws = set()
+        for ws in self.websockets:
+            try:
+                await ws.send_str(packet)
+            except Exception:
+                closed_ws.add(ws)
+        self.websockets -= closed_ws
+
     async def cog_load(self):
         self.runner = web.AppRunner(self.app)
         await self.runner.setup()
         site = web.TCPSite(self.runner, "0.0.0.0", 8080)
         await site.start()
+        self.position_broadcast_task.start()
 
     async def cog_unload(self):
+        self.position_broadcast_task.start()
         for ws in set(self.websockets):
             await ws.close()
         if self.runner:
