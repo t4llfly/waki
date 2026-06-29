@@ -99,6 +99,9 @@ class MusicPlayer(mafic.Player[commands.Bot]):
         self._is_boosted: bool = False
         self.current_requester: discord.Member | None = None
 
+    def notify_update(self) -> None:
+        self.client.dispatch("player_update")
+
     async def play_next(self) -> None:
         if not self.queue:
             self.current_requester = None
@@ -141,6 +144,7 @@ class MusicControlView(discord.ui.View):
             button.label = "▶️"
             button.style = discord.ButtonStyle.success
         await interaction.response.edit_message(view=self)
+        self.player.notify_update()
 
     @discord.ui.button(label="⏭️", style=discord.ButtonStyle.primary)
     async def skip_button(
@@ -154,6 +158,7 @@ class MusicControlView(discord.ui.View):
 
         await self.player.stop()
         await interaction.response.send_message("⏭️ Пропускаю песню!", ephemeral=False)
+        self.player.notify_update()
 
     @discord.ui.button(label="⏹️", style=discord.ButtonStyle.danger)
     async def stop_button(
@@ -174,6 +179,7 @@ class MusicControlView(discord.ui.View):
             await interaction.response.edit_message(
                 content="⏹️ Остановила песни и очистила очередь!", view=self
             )
+            self.player.notify_update()
         else:
             await interaction.response.send_message(
                 "❌ Я уже не в канале.", ephemeral=True

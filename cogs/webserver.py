@@ -8,7 +8,7 @@ from typing import Any, cast
 import discord
 import mafic
 from aiohttp import web
-from discord.ext import commands, tasks
+from discord.ext import commands
 
 from utils.music_player import MusicPlayer
 
@@ -314,6 +314,10 @@ class WebserverCog(commands.Cog):
     @commands.Cog.listener()
     async def on_track_end(self, event: mafic.TrackEndEvent[MusicPlayer]) -> None:
         await asyncio.sleep(0.5)
+        await self.send_state_update()
+
+    @commands.Cog.listener()
+    async def on_player_update(self) -> None:
         await self.send_state_update()
 
     # ===============================================================================

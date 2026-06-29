@@ -290,6 +290,7 @@ class MusicCog(commands.Cog):
         player = cast(MusicPlayer, guild.voice_client)
         if player.current:
             await player.stop()
+            player.notify_update()
             embed = discord.Embed(
                 description="⏭️ Пропускаю песню!", color=discord.Color.blue()
             )
@@ -403,6 +404,7 @@ class MusicCog(commands.Cog):
             description=f"🗑️ Очередь очищена! Удалено треков: **{count}**",
             color=discord.Color.green(),
         )
+        player.notify_update()
         await interaction.response.send_message(embed=embed)
 
     # same command but different aliases ==========================================
@@ -426,6 +428,7 @@ class MusicCog(commands.Cog):
                 description="**⏹️ Остановила песни и очистила очередь!**",
                 color=discord.Color.red(),
             )
+            player.notify_update()
             await interaction.response.send_message(embed=embed)
         else:
             await interaction.response.send_message(
@@ -463,6 +466,7 @@ class MusicCog(commands.Cog):
             return
 
         await player.set_volume(level)
+        player.notify_update()
 
         if level == 0:
             embed = discord.Embed(
@@ -574,6 +578,7 @@ class MusicCog(commands.Cog):
                 description=random.choice(responses),
                 color=discord.Color.orange(),
             )
+            player.notify_update()
             await interaction.response.send_message(embed=embed)
         else:
             player._is_boosted = False
@@ -584,6 +589,7 @@ class MusicCog(commands.Cog):
                 description=f"🌸 Фух... Возвращаю тишину (Громкость: {target_vol}%). Надеюсь, все живы и здоровы!",
                 color=discord.Color.green(),
             )
+            player.notify_update()
             await interaction.response.send_message(embed=embed)
 
 
