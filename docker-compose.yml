@@ -1,15 +1,15 @@
 version: "3.8"
 
 services:
-  lavalink:
-    image: ghcr.io/lavalink-devs/lavalink:latest
-    container_name: waki_lavalink
-    restart: unless-stopped
-    environment:
-      - _JAVA_OPTIONS=-Xmx1G -Xms512M -XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:+UnlockExperimentalVMOptions -XX:+DoEscapeAnalysis -XX:MaxGCPauseMillis=10
-    volumes:
-      - ./lavalink/application.yml:/opt/Lavalink/application.yml
-      - ./lavalink/plugins:/opt/Lavalink/plugins
+  # lavalink:
+  #   image: ghcr.io/lavalink-devs/lavalink:latest
+  #   container_name: waki_lavalink
+  #   restart: unless-stopped
+  #   environment:
+  #     - _JAVA_OPTIONS=-Xmx1G -Xms512M -XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:+UnlockExperimentalVMOptions -XX:+DoEscapeAnalysis -XX:MaxGCPauseMillis=10
+  #   volumes:
+  #     - ./lavalink/application.yml:/opt/Lavalink/application.yml
+  #     - ./lavalink/plugins:/opt/Lavalink/plugins
 
   music_bot:
     build: .
