@@ -251,9 +251,9 @@ class WebserverCog(commands.Cog):
         if url.lower() in secret_keywords:
             url = "https://youtu.be/LSEz6KT026k"
             is_waki_song = True
-            requester = guild.me
+            _requester = guild.me
         else:
-            requester = member
+            _requester = member
 
         try:
             tracks = await player.fetch_tracks(url)
@@ -495,16 +495,55 @@ class WebserverCog(commands.Cog):
     async def cog_load(self):
         self.runner = web.AppRunner(self.app)
         await self.runner.setup()
+
+        max_retries = 5
+        retry_delay = 1.0
+
+        for attempt in range(max_retries):
+            try:
+                site = web.TCPSite(self.runner, "0.0.0.0", 8080)
+                await site.start()
+                print(f"Запустила сервер на порту 8080 (попытка {attempt + 1})")
+                return
+            except OSError as e:
+                if (
+                    "address already in use" in str(e).lower()
+                    and attempt < max_retries - 1
+                ):
+                    print(
+                        f"Порт 8080 занят, жду {retry_delay}с... (попытка {attempt + 1}/{max_retries})"
+                    )
+                    await asyncio.sleep(retry_delay)
+                else:
+                    raise e
+
         site = web.TCPSite(self.runner, "0.0.0.0", 8080)
         await site.start()
         self.position_broadcast_task.start()
 
     async def cog_unload(self):
-        self.position_broadcast_task.start()
+        print("Выгружаю сервер...")
+        if (
+            hasattr(self, "position_broadcast_task")
+            and self.position_broadcast_task.is_running()
+        ):
+            self.position_broadcast_task.cancel()
+
         for ws in set(self.websockets):
-            await ws.close()
+            try:
+                await ws.close()
+            except Exception:
+                pass
+        self.websockets.clear()
+
         if self.runner:
-            await self.runner.cleanup()
+            try:
+                await self.runner.cleanup()
+            except Exception as e:
+                print(f"Ошибка при очистке: {e}")
+
+        await asyncio.sleep(0.5)
+        print("Сервер выгружен")
 
 
 async def setup(bot: commands.Bot):
