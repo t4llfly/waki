@@ -245,6 +245,16 @@ class WebserverCog(commands.Cog):
         else:
             player = cast(MusicPlayer, voice_client)
 
+        is_waki_song = False
+        secret_keywords = ["ваки", "waki", "твоя песня", "любимая", "твой трек"]
+
+        if url.lower() in secret_keywords:
+            url = "https://youtu.be/LSEz6KT026k"
+            is_waki_song = True
+            requester = guild.me
+        else:
+            requester = member
+
         try:
             tracks = await player.fetch_tracks(url)
             if not tracks:
@@ -266,6 +276,10 @@ class WebserverCog(commands.Cog):
             await self.send_state_update()
 
             title = tracks.name if is_playlist else tracks[0].title
+
+            if is_waki_song:
+                title = f"✨ {title} (моя любимая песня!)"
+
             return {"success": True, "title": title, "is_playlist": is_playlist}
         except Exception as e:
             return {"error": str(e)}
@@ -410,7 +424,19 @@ class WebserverCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_track_end(self, event: mafic.TrackEndEvent[MusicPlayer]) -> None:
-        await asyncio.sleep(0.5)
+        if "REPLACED" in str(event.reason):
+            return
+
+        await asyncio.sleep(1.0)
+
+        player = event.player
+        max_retries = 3
+        for _ in range(max_retries):
+            if player.current:
+                await self.send_state_update()
+                return
+            await asyncio.sleep(0.5)
+
         await self.send_state_update()
 
     @commands.Cog.listener()
