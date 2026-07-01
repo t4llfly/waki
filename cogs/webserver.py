@@ -264,6 +264,8 @@ class WebserverCog(commands.Cog):
             if is_playlist:
                 for t in tracks.tracks:
                     player.queue.append({"track": t, "requester": member})
+                if not player.current:
+                    await player.play_next()
             else:
                 track = tracks[0]
                 if player.current:
