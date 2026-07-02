@@ -19,6 +19,56 @@ class MusicCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    @commands.Cog.listener("on_node_ready")
+    async def on_node_ready(self, node: mafic.Node) -> None:
+        print(f"Lavalink узел '{node.label}' готов к работе!")
+
+        stats = getattr(node, "stats", None)
+        if stats:
+            try:
+                cpu_load = getattr(stats.cpu, "lavalink_load", 0) or getattr(
+                    stats.cpu, "system_load", 0
+                )
+                ram_mb = round(stats.memory.used / 1024 / 1024)
+                print(f"   📊 CPU: {cpu_load}%, RAM: {ram_mb}MB")
+            except Exception:
+                pass
+
+    @commands.Cog.listener("on_node_unavailable")
+    async def on_node_unavailable(self, node: mafic.Node) -> None:
+        print(f"Lavalink узел '{node.label}' отключился.")
+
+        affected_players = []
+        for vc in self.bot.voice_clients:
+            if isinstance(vc, MusicPlayer) and getattr(vc, "node", None) == node:
+                affected_players.append(vc)
+
+        if affected_players:
+            print(f"Затронуто {len(affected_players)} плееров. Пытаюсь мигрировать...")
+
+            pool = getattr(self.bot, "pool", None)
+            if not pool:
+                print("Пул узлов не найден в боте!")
+                return
+
+            for player in affected_players:
+                try:
+                    new_node = pool.get_best_node()
+                    if new_node and new_node != node and new_node.available:
+                        await player.change_node(new_node)
+                        print(
+                            f"Плеер в {player.guild.name} перенесен на '{new_node.label}'"
+                        )
+
+                        if player.current:
+                            await player.seek(player.position)
+                    else:
+                        print(
+                            f"❌ Нет доступных узлов для миграции плеера в {player.guild.name}"
+                        )
+                except Exception as e:
+                    print(f"❌ Ошибка миграции плеера: {e}")
+
     @commands.Cog.listener()
     async def on_track_start(self, event: mafic.TrackStartEvent[MusicPlayer]) -> None:
         track = event.track
